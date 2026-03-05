@@ -6,6 +6,7 @@ import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js
 
 const CONTEXT_SUPPORTED_DOCUMENT = 'encryptedNotes.supportedDocument';
 const CONTEXT_IS_ENCRYPTED_DOCUMENT = 'encryptedNotes.isEncryptedDocument';
+const CONTEXT_CAN_PERMANENT_DECRYPT = 'encryptedNotes.canPermanentDecrypt';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>();
@@ -28,6 +29,7 @@ const showInfo = (message: string): void => {
 };
 
 const isExtensionEnabled = (): boolean => getExtensionConfig().enabled;
+const shouldRestorePlainTextAfterSave = (): boolean => getExtensionConfig().restorePlainTextAfterSave;
 
 const isSupportedDocument = (document: vscode.TextDocument): boolean => {
   if (!isExtensionEnabled() || document.uri.scheme !== 'file') {
@@ -68,14 +70,18 @@ const updateEditorContext = async (): Promise<void> => {
   if (!activeDocument) {
     await vscode.commands.executeCommand('setContext', CONTEXT_SUPPORTED_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, false);
+    await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, false);
     return;
   }
 
+  const uriKey = getUriKey(activeDocument.uri);
   const isEncrypted = isEncryptedText(activeDocument.getText());
   const supported = isSupportedDocument(activeDocument);
+  const canPermanentDecrypt = supported && decryptedSession.has(uriKey);
 
   await vscode.commands.executeCommand('setContext', CONTEXT_SUPPORTED_DOCUMENT, supported);
   await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, isEncrypted);
+  await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, canPermanentDecrypt);
 };
 
 const decryptWithPassword = async (
@@ -195,7 +201,36 @@ const decryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
   await tryDecryptDocument(document);
 };
 
-const runCommandForActiveDocument = async (mode: 'encrypt' | 'decrypt' | 'toggle'): Promise<void> => {
+const permanentlyDecryptCurrentDocument = async (document: vscode.TextDocument): Promise<void> => {
+  const uriKey = getUriKey(document.uri);
+  const wasEncrypted = isEncryptedText(document.getText());
+
+  if (wasEncrypted) {
+    const success = await tryDecryptDocument(document, false);
+    if (!success) {
+      return;
+    }
+  } else if (!decryptedSession.has(uriKey)) {
+    showInfo('当前文件不在自动加密会话中，无需永久解密。');
+    return;
+  }
+
+  decryptedSession.delete(uriKey);
+  passwordCache.delete(uriKey);
+  restorePlainTextAfterSave.delete(uriKey);
+
+  const saved = await document.save();
+  if (!saved) {
+    showError('文件已切换为永久解密模式，但自动保存失败，请手动保存。');
+    return;
+  }
+
+  showInfo('已永久解密并保存，后续保存不会自动加密。');
+};
+
+const runCommandForActiveDocument = async (
+  mode: 'encrypt' | 'decrypt' | 'toggle' | 'permanentDecrypt',
+): Promise<void> => {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     showError('没有可操作的活动编辑器。');
@@ -221,6 +256,12 @@ const runCommandForActiveDocument = async (mode: 'encrypt' | 'decrypt' | 'toggle
 
   if (mode === 'decrypt') {
     await decryptCurrentDocument(document);
+    await updateEditorContext();
+    return;
+  }
+
+  if (mode === 'permanentDecrypt') {
+    await permanentlyDecryptCurrentDocument(document);
     await updateEditorContext();
     return;
   }
@@ -283,6 +324,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('encrypted-notes.decryptCurrent', async () =>
       runCommandForActiveDocument('decrypt'),
     ),
+    vscode.commands.registerCommand('encrypted-notes.permanentDecryptCurrent', async () =>
+      runCommandForActiveDocument('permanentDecrypt'),
+    ),
     vscode.workspace.onDidOpenTextDocument((document) => {
       void tryAutoDecrypt(document);
       void updateEditorContext();
@@ -325,11 +369,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       }
 
       const plainTextToRestore = document.getText();
+      const restorePlainText = shouldRestorePlainTextAfterSave();
 
       event.waitUntil(
         (async () => {
           const encryptedContent = encryptText(plainTextToRestore, password);
-          restorePlainTextAfterSave.set(uriKey, plainTextToRestore);
+          if (restorePlainText) {
+            restorePlainTextAfterSave.set(uriKey, plainTextToRestore);
+          } else {
+            restorePlainTextAfterSave.delete(uriKey);
+          }
           return [vscode.TextEdit.replace(getDocumentRange(document), encryptedContent)];
         })(),
       );
@@ -347,6 +396,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
           const applied = await replaceDocumentText(document, plainTextToRestore);
           if (!applied) {
             showError('文件已按加密格式保存，但无法恢复编辑器中的明文内容。');
+            decryptedSession.delete(uriKey);
           } else {
             decryptedSession.add(uriKey);
             vscode.window.setStatusBarMessage('Encrypted Notes: 已加密写入磁盘，编辑器已恢复明文。', 2200);

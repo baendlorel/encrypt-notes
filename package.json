@@ -34,7 +34,8 @@
     "onStartupFinished",
     "onCommand:encrypted-notes.toggleEncryption",
     "onCommand:encrypted-notes.encryptCurrent",
-    "onCommand:encrypted-notes.decryptCurrent"
+    "onCommand:encrypted-notes.decryptCurrent",
+    "onCommand:encrypted-notes.permanentDecryptCurrent"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -61,6 +62,15 @@
           "light": "assets/unlock-light.svg",
           "dark": "assets/unlock-dark.svg"
         }
+      },
+      {
+        "command": "encrypted-notes.permanentDecryptCurrent",
+        "title": "%command.permanentDecryptCurrent.title%",
+        "category": "%extension.category%",
+        "icon": {
+          "light": "assets/unlock-light.svg",
+          "dark": "assets/unlock-dark.svg"
+        }
       }
     ],
     "menus": {
@@ -74,6 +84,11 @@
           "command": "encrypted-notes.decryptCurrent",
           "group": "navigation@9",
           "when": "editorTextFocus && encryptedNotes.supportedDocument && encryptedNotes.isEncryptedDocument"
+        },
+        {
+          "command": "encrypted-notes.permanentDecryptCurrent",
+          "group": "navigation@10",
+          "when": "editorTextFocus && !encryptedNotes.isEncryptedDocument && encryptedNotes.canPermanentDecrypt"
         }
       ]
     },
@@ -102,6 +117,11 @@
             "type": "string"
           },
           "markdownDescription": "%configuration.fileExtensions.description%"
+        },
+        "encrypted-notes.restorePlainTextAfterSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "%configuration.restorePlainTextAfterSave.description%"
         }
       }
     }

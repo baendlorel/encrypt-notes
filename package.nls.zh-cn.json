@@ -3,7 +3,9 @@
   "command.toggleEncryption.title": "加密/解密当前文件",
   "command.encryptCurrent.title": "加密当前文件",
   "command.decryptCurrent.title": "解密当前文件",
+  "command.permanentDecryptCurrent.title": "永久解密当前文件",
   "configuration.title": "加密笔记",
   "configuration.enabled.description": "启用加密文件处理能力。",
-  "configuration.fileExtensions.description": "需要处理的文件扩展名（不带点），例如 `[\"txt\", \"md\"]`。"
+  "configuration.fileExtensions.description": "需要处理的文件扩展名（不带点），例如 `[\"txt\", \"md\"]`。",
+  "configuration.restorePlainTextAfterSave.description": "保存后是否在编辑器中恢复明文。关闭后可避免因恢复明文而长期显示未保存标记。"
 }
