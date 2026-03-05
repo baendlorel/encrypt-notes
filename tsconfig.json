@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "resolvePackageJsonImports": true,
+    "declaration": false,
+    "allowArbitraryExtensions": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "outDir": "out",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "tests/**/*.ts"]
+}

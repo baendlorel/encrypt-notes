@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "resolveJsonModule": false,
+    "resolvePackageJsonImports": true,
+    "declaration": false,
+    "allowArbitraryExtensions": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "exclude": ["tests/**/*", "plugins/**/*.ts", "node_modules", ".vscode-test"]
+}
