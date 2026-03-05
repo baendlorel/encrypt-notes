@@ -11,6 +11,7 @@ const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>();
 const skippedAutoDecrypt = new Set<string>();
 const decryptPromptInProgress = new Set<string>();
+const restorePlainTextAfterSave = new Map<string, string>();
 
 const getUriKey = (uri: vscode.Uri): string => uri.toString();
 
@@ -319,17 +320,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       }
 
       if (isEncryptedText(document.getText())) {
-        vscode.window.showInformationMessage('文件已经是加密过的：' + document.getText());
         decryptedSession.delete(uriKey);
         return;
-      } else {
-        vscode.window.showInformationMessage('正在自动加密文件...');
       }
+
+      const plainTextToRestore = document.getText();
 
       event.waitUntil(
         (async () => {
-          const encryptedContent = encryptText(document.getText(), password);
-          decryptedSession.delete(uriKey);
+          const encryptedContent = encryptText(plainTextToRestore, password);
+          restorePlainTextAfterSave.set(uriKey, plainTextToRestore);
           return [vscode.TextEdit.replace(getDocumentRange(document), encryptedContent)];
         })(),
       );
@@ -338,14 +338,28 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.onDidSaveTextDocument((document) => {
       const uriKey = getUriKey(document.uri);
 
-      if (isEncryptedText(document.getText())) {
-        decryptedSession.delete(uriKey);
-        vscode.window.setStatusBarMessage('Encrypted Notes: 文件已按加密格式保存。', 1800);
-      }
+      void (async () => {
+        const plainTextToRestore = restorePlainTextAfterSave.get(uriKey);
 
-      if (vscode.window.activeTextEditor?.document.uri.toString() === document.uri.toString()) {
-        void updateEditorContext();
-      }
+        if (plainTextToRestore !== undefined) {
+          restorePlainTextAfterSave.delete(uriKey);
+
+          const applied = await replaceDocumentText(document, plainTextToRestore);
+          if (!applied) {
+            showError('文件已按加密格式保存，但无法恢复编辑器中的明文内容。');
+          } else {
+            decryptedSession.add(uriKey);
+            vscode.window.setStatusBarMessage('Encrypted Notes: 已加密写入磁盘，编辑器已恢复明文。', 2200);
+          }
+        } else if (isEncryptedText(document.getText())) {
+          decryptedSession.delete(uriKey);
+          vscode.window.setStatusBarMessage('Encrypted Notes: 文件已按加密格式保存。', 1800);
+        }
+
+        if (vscode.window.activeTextEditor?.document.uri.toString() === document.uri.toString()) {
+          await updateEditorContext();
+        }
+      })();
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
       const uriKey = getUriKey(document.uri);
