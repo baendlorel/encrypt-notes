@@ -4,6 +4,16 @@ import { getExtensionConfig, isSupportedByUriExtensionList } from './lib/config.
 import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
 import {
+  closeTabsForUri,
+  EncryptedVirtualFileSystemProvider,
+  getSourceUri,
+  getSourceUriKey,
+  getUriKey,
+  hasOpenTabForSource,
+  isVirtualDocument,
+  toVirtualUri,
+} from './core/virtual-edit.js';
+import {
   CONTEXT_CAN_ENCRYPT_DOCUMENT,
   CONTEXT_CAN_PERMANENT_DECRYPT,
   CONTEXT_IS_ENCRYPTED_DOCUMENT,
@@ -16,90 +26,6 @@ const decryptedSession = new Set<string>();
 const skippedAutoDecrypt = new Set<string>();
 const decryptPromptInProgress = new Set<string>();
 const encryptedOnDiskState = new Map<string, boolean>();
-
-const getUriKey = (uri: vscode.Uri): string => uri.toString();
-
-const getDecryptedDisplayPrefix = (): string => {
-  const language = vscode.env.language.toLowerCase();
-  return language.startsWith('zh') ? '[明文]' : '[Decrypted]';
-};
-
-const getVirtualDisplayPath = (sourceUri: vscode.Uri): string => {
-  const sourcePath = sourceUri.path;
-  const lastSlash = sourcePath.lastIndexOf('/');
-  const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
-  const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
-
-  if (filename.length === 0) {
-    return sourcePath;
-  }
-
-  return `${directoryPath}${getDecryptedDisplayPrefix()}${filename}`;
-};
-
-const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | undefined => {
-  if (uri.scheme !== VIRTUAL_DOCUMENT_SCHEME || uri.query.length === 0) {
-    return undefined;
-  }
-
-  try {
-    const decoded = decodeURIComponent(uri.query);
-    const parsed = vscode.Uri.parse(decoded);
-    return parsed.scheme === 'file' ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-const getSourceUri = (uri: vscode.Uri): vscode.Uri => parseSourceUriFromVirtualUri(uri) ?? uri;
-
-const getSourceUriKey = (uri: vscode.Uri): string => getUriKey(getSourceUri(uri));
-
-const toVirtualUri = (sourceUri: vscode.Uri): vscode.Uri => {
-  return sourceUri.with({
-    scheme: VIRTUAL_DOCUMENT_SCHEME,
-    path: getVirtualDisplayPath(sourceUri),
-    query: encodeURIComponent(sourceUri.toString()),
-    fragment: '',
-  });
-};
-
-const getRequiredSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri => {
-  const sourceUri = parseSourceUriFromVirtualUri(uri);
-  if (!sourceUri) {
-    throw vscode.FileSystemError.FileNotFound(uri);
-  }
-
-  return sourceUri;
-};
-
-const isVirtualDocument = (document: vscode.TextDocument): boolean => {
-  return document.uri.scheme === VIRTUAL_DOCUMENT_SCHEME;
-};
-
-const getTabsForUri = (uri: vscode.Uri): vscode.Tab[] => {
-  const uriKey = getUriKey(uri);
-  const tabs: vscode.Tab[] = [];
-
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      if (tab.input instanceof vscode.TabInputText && getUriKey(tab.input.uri) === uriKey) {
-        tabs.push(tab);
-      }
-    }
-  }
-
-  return tabs;
-};
-
-const closeTabsForUri = async (uri: vscode.Uri): Promise<void> => {
-  const tabs = getTabsForUri(uri);
-  if (tabs.length === 0) {
-    return;
-  }
-
-  await vscode.window.tabGroups.close(tabs, true);
-};
 
 const getDocumentRange = (document: vscode.TextDocument): vscode.Range => {
   return new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
@@ -522,148 +448,22 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
   }
 };
 
-class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProvider {
-  private readonly changeEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
-
-  public readonly onDidChangeFile = this.changeEmitter.event;
-
-  public watch(
-    _uri: vscode.Uri,
-    _options: { readonly recursive: boolean; readonly excludes: readonly string[] },
-  ): vscode.Disposable {
-    return new vscode.Disposable(() => {});
-  }
-
-  public async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    return vscode.workspace.fs.stat(sourceUri);
-  }
-
-  public async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    return vscode.workspace.fs.readDirectory(sourceUri);
-  }
-
-  public async createDirectory(uri: vscode.Uri): Promise<void> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    await vscode.workspace.fs.createDirectory(sourceUri);
-  }
-
-  public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    const sourceKey = getUriKey(sourceUri);
-    const raw = await vscode.workspace.fs.readFile(sourceUri);
-    const content = Buffer.from(raw).toString('utf8');
-
-    const encrypted = isEncryptedText(content);
-    encryptedOnDiskState.set(sourceKey, encrypted);
-
-    if (!encrypted) {
-      return raw;
-    }
-
-    const password = passwordCache.get(sourceKey);
-    if (!password) {
-      throw vscode.FileSystemError.NoPermissions('缺少密码，请先重新解密文件。');
-    }
-
-    try {
-      const plainText = decryptText(content, password);
-      return Buffer.from(plainText, 'utf8');
-    } catch {
-      passwordCache.delete(sourceKey);
-      throw vscode.FileSystemError.NoPermissions('密码错误，请关闭后重新打开文件。');
-    }
-  }
-
-  public async writeFile(
-    uri: vscode.Uri,
-    content: Uint8Array,
-    options: {
-      readonly create: boolean;
-      readonly overwrite: boolean;
-    },
-  ): Promise<void> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    const sourceKey = getUriKey(sourceUri);
-    const password = passwordCache.get(sourceKey);
-
-    if (!password) {
-      throw vscode.FileSystemError.NoPermissions('缺少密码，无法保存。');
-    }
-
-    let sourceExists = true;
-    try {
-      await vscode.workspace.fs.stat(sourceUri);
-    } catch {
-      sourceExists = false;
-    }
-
-    if (!sourceExists && !options.create) {
-      throw vscode.FileSystemError.FileNotFound(sourceUri);
-    }
-
-    if (sourceExists && !options.overwrite) {
-      throw vscode.FileSystemError.FileExists(sourceUri);
-    }
-
-    const plainText = Buffer.from(content).toString('utf8');
-    const encryptedContent = encryptText(plainText, password);
-
-    await vscode.workspace.fs.writeFile(sourceUri, Buffer.from(encryptedContent, 'utf8'));
-    encryptedOnDiskState.set(sourceKey, true);
-    decryptedSession.add(sourceKey);
-
-    this.changeEmitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
-  }
-
-  public async delete(
-    uri: vscode.Uri,
-    options: {
-      readonly recursive: boolean;
-      readonly useTrash: boolean;
-    },
-  ): Promise<void> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    await vscode.workspace.fs.delete(sourceUri, options);
-  }
-
-  public async rename(
-    oldUri: vscode.Uri,
-    newUri: vscode.Uri,
-    options: {
-      readonly overwrite: boolean;
-    },
-  ): Promise<void> {
-    const oldSourceUri = getRequiredSourceUriFromVirtualUri(oldUri);
-    const newSourceUri = getRequiredSourceUriFromVirtualUri(newUri);
-    await vscode.workspace.fs.rename(oldSourceUri, newSourceUri, options);
-  }
-}
-
-const hasOpenTabForSource = (sourceUri: vscode.Uri): boolean => {
-  const sourceUriKey = getUriKey(sourceUri);
-
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      if (!(tab.input instanceof vscode.TabInputText)) {
-        continue;
-      }
-
-      if (getSourceUriKey(tab.input.uri) === sourceUriKey) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-};
-
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
   context.subscriptions.push(
-    vscode.workspace.registerFileSystemProvider(VIRTUAL_DOCUMENT_SCHEME, new EncryptedVirtualFileSystemProvider(), {
-      isCaseSensitive: true,
-    }),
+    vscode.workspace.registerFileSystemProvider(
+      VIRTUAL_DOCUMENT_SCHEME,
+      new EncryptedVirtualFileSystemProvider({
+        passwordCache,
+        encryptedOnDiskState,
+        decryptedSession,
+        decryptText,
+        encryptText,
+        isEncryptedText,
+      }),
+      {
+        isCaseSensitive: true,
+      },
+    ),
     vscode.commands.registerCommand('encrypted-notes.toggleEncryption', async () =>
       runCommandForActiveDocument('toggle'),
     ),
