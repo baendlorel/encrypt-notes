@@ -26,6 +26,24 @@ const decryptedSession = new Set<string>();
 const skippedAutoDecrypt = new Set<string>();
 const decryptPromptInProgress = new Set<string>();
 const encryptedOnDiskState = new Map<string, boolean>();
+const codeLensChangeEmitter = new vscode.EventEmitter<void>();
+
+const CODELENS_ENCRYPT_COMMAND = 'encrypted-notes.codelensEncryptCurrent';
+const CODELENS_DECRYPT_COMMAND = 'encrypted-notes.codelensDecryptCurrent';
+
+const isChineseLanguage = (): boolean => vscode.env.language.toLowerCase().startsWith('zh');
+
+const getCodeLensEncryptTitle = (): string => (isChineseLanguage() ? '加密' : 'Encrypt');
+const getCodeLensDecryptTitle = (): string => (isChineseLanguage() ? '解密' : 'Decrypt');
+
+const getCodeLensAnchorRange = (document: vscode.TextDocument): vscode.Range => {
+  const line = Math.max(0, Math.min(document.lineCount - 1, 0));
+  return new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0));
+};
+
+const triggerCodeLensRefresh = (): void => {
+  codeLensChangeEmitter.fire();
+};
 
 const getDocumentRange = (document: vscode.TextDocument): vscode.Range => {
   return new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
@@ -37,6 +55,36 @@ const showError = (message: string): void => {
 
 const showInfo = (message: string): void => {
   void vscode.window.showInformationMessage(message);
+};
+
+const confirmPermanentDecrypt = async (): Promise<boolean> => {
+  const message = isChineseLanguage() ? '确认解密' : 'Confirm Decrypt';
+  const placeholder = isChineseLanguage()
+    ? '解密后将变为普通文件，以后不需要输入密码访问。'
+    : 'Decrypting will convert this into a normal file. Password is no longer required.';
+
+  const continueLabel = isChineseLanguage() ? '继续' : 'Continue';
+  const cancelLabel = isChineseLanguage() ? '取消' : 'Cancel';
+
+  const selected = await vscode.window.showQuickPick(
+    [
+      {
+        label: continueLabel,
+        description: message,
+        value: 'continue',
+      },
+      {
+        label: cancelLabel,
+        value: 'cancel',
+      },
+    ],
+    {
+      title: placeholder,
+      ignoreFocusOut: true,
+    },
+  );
+
+  return selected?.value === 'continue';
 };
 
 const isExtensionEnabled = (): boolean => getExtensionConfig().enabled;
@@ -74,6 +122,55 @@ const getEncryptedOnDiskState = (document: vscode.TextDocument): boolean => {
 
   return isEncryptedText(document.getText());
 };
+
+class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
+  public readonly onDidChangeCodeLenses = codeLensChangeEmitter.event;
+
+  public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
+    if (!isExtensionEnabled()) {
+      return [];
+    }
+
+    const sourceUri = getSourceUri(document.uri);
+    if (sourceUri.scheme !== 'file' || !isSupportedByUriExtensionList(sourceUri)) {
+      return [];
+    }
+
+    const isSourceFile = document.uri.scheme === 'file';
+    const encryptedOnDisk = getEncryptedOnDiskState(document);
+    const canEncrypt = isSourceFile && !encryptedOnDisk;
+    const canDecrypt = (isSourceFile && encryptedOnDisk) || isVirtualDocument(document);
+
+    if (!canEncrypt && !canDecrypt) {
+      return [];
+    }
+
+    const range = getCodeLensAnchorRange(document);
+    const lenses: vscode.CodeLens[] = [];
+
+    if (canEncrypt) {
+      lenses.push(
+        new vscode.CodeLens(range, {
+          title: getCodeLensEncryptTitle(),
+          command: CODELENS_ENCRYPT_COMMAND,
+          arguments: [document.uri],
+        }),
+      );
+    }
+
+    if (canDecrypt) {
+      lenses.push(
+        new vscode.CodeLens(range, {
+          title: getCodeLensDecryptTitle(),
+          command: CODELENS_DECRYPT_COMMAND,
+          arguments: [document.uri],
+        }),
+      );
+    }
+
+    return lenses;
+  }
+}
 
 const isSupportedDocument = (document: vscode.TextDocument): boolean => {
   if (!isExtensionEnabled()) {
@@ -124,6 +221,7 @@ const updateEditorContext = async (): Promise<void> => {
     await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_CAN_ENCRYPT_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, false);
+    triggerCodeLensRefresh();
     return;
   }
 
@@ -138,6 +236,7 @@ const updateEditorContext = async (): Promise<void> => {
   await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, encryptedInEditor);
   await vscode.commands.executeCommand('setContext', CONTEXT_CAN_ENCRYPT_DOCUMENT, canEncrypt);
   await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, canPermanentDecrypt);
+  triggerCodeLensRefresh();
 };
 
 const showDecryptError = (error: unknown): void => {
@@ -364,16 +463,20 @@ const permanentlyDecryptCurrentDocument = async (document: vscode.TextDocument):
   showInfo('已永久解密并保存，后续保存不会自动加密。');
 };
 
-const runCommandForActiveDocument = async (
-  mode: 'encrypt' | 'decrypt' | 'toggle' | 'permanentDecrypt',
-): Promise<void> => {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    showError('没有可操作的活动编辑器。');
-    return;
+const resolveOpenDocumentByUri = async (uri: vscode.Uri): Promise<vscode.TextDocument> => {
+  const uriKey = getUriKey(uri);
+  const opened = vscode.workspace.textDocuments.find((item) => getUriKey(item.uri) === uriKey);
+  if (opened) {
+    return opened;
   }
 
-  const document = editor.document;
+  return vscode.workspace.openTextDocument(uri);
+};
+
+const runCommandForDocument = async (
+  document: vscode.TextDocument,
+  mode: 'encrypt' | 'decrypt' | 'toggle' | 'permanentDecrypt',
+): Promise<void> => {
   if (document.uri.scheme !== 'file' && !isVirtualDocument(document)) {
     showError('仅支持本地文件。');
     return;
@@ -409,6 +512,18 @@ const runCommandForActiveDocument = async (
   }
 
   await updateEditorContext();
+};
+
+const runCommandForActiveDocument = async (
+  mode: 'encrypt' | 'decrypt' | 'toggle' | 'permanentDecrypt',
+): Promise<void> => {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    showError('没有可操作的活动编辑器。');
+    return;
+  }
+
+  await runCommandForDocument(editor.document, mode);
 };
 
 const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
@@ -448,8 +563,34 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
   }
 };
 
+const runCodeLensEncryptCommand = async (targetUri: vscode.Uri | undefined): Promise<void> => {
+  const document = targetUri ? await resolveOpenDocumentByUri(targetUri) : vscode.window.activeTextEditor?.document;
+  if (!document) {
+    showError('没有可操作的活动编辑器。');
+    return;
+  }
+
+  await runCommandForDocument(document, 'encrypt');
+};
+
+const runCodeLensDecryptCommand = async (targetUri: vscode.Uri | undefined): Promise<void> => {
+  const document = targetUri ? await resolveOpenDocumentByUri(targetUri) : vscode.window.activeTextEditor?.document;
+  if (!document) {
+    showError('没有可操作的活动编辑器。');
+    return;
+  }
+
+  const confirmed = await confirmPermanentDecrypt();
+  if (!confirmed) {
+    return;
+  }
+
+  await runCommandForDocument(document, 'permanentDecrypt');
+};
+
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
   context.subscriptions.push(
+    codeLensChangeEmitter,
     vscode.workspace.registerFileSystemProvider(
       VIRTUAL_DOCUMENT_SCHEME,
       new EncryptedVirtualFileSystemProvider({
@@ -464,6 +605,10 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         isCaseSensitive: true,
       },
     ),
+    vscode.languages.registerCodeLensProvider(
+      [{ scheme: 'file' }, { scheme: VIRTUAL_DOCUMENT_SCHEME }],
+      new EncryptionCodeLensProvider(),
+    ),
     vscode.commands.registerCommand('encrypted-notes.toggleEncryption', async () =>
       runCommandForActiveDocument('toggle'),
     ),
@@ -475,6 +620,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     ),
     vscode.commands.registerCommand('encrypted-notes.permanentDecryptCurrent', async () =>
       runCommandForActiveDocument('permanentDecrypt'),
+    ),
+    vscode.commands.registerCommand(CODELENS_ENCRYPT_COMMAND, async (targetUri?: vscode.Uri) =>
+      runCodeLensEncryptCommand(targetUri),
+    ),
+    vscode.commands.registerCommand(CODELENS_DECRYPT_COMMAND, async (targetUri?: vscode.Uri) =>
+      runCodeLensDecryptCommand(targetUri),
     ),
     vscode.workspace.onDidOpenTextDocument((document) => {
       void (async () => {

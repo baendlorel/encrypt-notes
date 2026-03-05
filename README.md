@@ -5,6 +5,7 @@ Encrypt and decrypt text files in VS Code.
 ## Features
 
 - Adds lock/unlock buttons to the editor title area (top-right).
+- Adds conditional `Encrypt / Decrypt` CodeLens actions at the first line.
 - Supports manual encrypt/decrypt for current file.
 - Provides a permanent decrypt action for decrypted sessions to save plaintext directly.
 - Automatically prompts for password when opening encrypted files.
