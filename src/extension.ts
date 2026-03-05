@@ -6,6 +6,7 @@ import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js
 
 const CONTEXT_SUPPORTED_DOCUMENT = 'encryptedNotes.supportedDocument';
 const CONTEXT_IS_ENCRYPTED_DOCUMENT = 'encryptedNotes.isEncryptedDocument';
+const CONTEXT_CAN_ENCRYPT_DOCUMENT = 'encryptedNotes.canEncryptDocument';
 const CONTEXT_CAN_PERMANENT_DECRYPT = 'encryptedNotes.canPermanentDecrypt';
 
 const passwordCache = new Map<string, string>();
@@ -13,6 +14,7 @@ const decryptedSession = new Set<string>();
 const skippedAutoDecrypt = new Set<string>();
 const decryptPromptInProgress = new Set<string>();
 const restorePlainTextAfterSave = new Map<string, string>();
+const encryptedOnDiskState = new Map<string, boolean>();
 
 const getUriKey = (uri: vscode.Uri): string => uri.toString();
 
@@ -30,6 +32,31 @@ const showInfo = (message: string): void => {
 
 const isExtensionEnabled = (): boolean => getExtensionConfig().enabled;
 const shouldRestorePlainTextAfterSave = (): boolean => getExtensionConfig().restorePlainTextAfterSave;
+
+const getEncryptedOnDiskState = (document: vscode.TextDocument): boolean => {
+  const cached = encryptedOnDiskState.get(getUriKey(document.uri));
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  return isEncryptedText(document.getText());
+};
+
+const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promise<void> => {
+  if (document.uri.scheme !== 'file') {
+    return;
+  }
+
+  const uriKey = getUriKey(document.uri);
+
+  try {
+    const raw = await vscode.workspace.fs.readFile(document.uri);
+    const content = Buffer.from(raw).toString('utf8');
+    encryptedOnDiskState.set(uriKey, isEncryptedText(content));
+  } catch {
+    encryptedOnDiskState.set(uriKey, isEncryptedText(document.getText()));
+  }
+};
 
 const isSupportedDocument = (document: vscode.TextDocument): boolean => {
   if (!isExtensionEnabled() || document.uri.scheme !== 'file') {
@@ -70,17 +97,21 @@ const updateEditorContext = async (): Promise<void> => {
   if (!activeDocument) {
     await vscode.commands.executeCommand('setContext', CONTEXT_SUPPORTED_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, false);
+    await vscode.commands.executeCommand('setContext', CONTEXT_CAN_ENCRYPT_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, false);
     return;
   }
 
   const uriKey = getUriKey(activeDocument.uri);
   const isEncrypted = isEncryptedText(activeDocument.getText());
+  const encryptedOnDisk = getEncryptedOnDiskState(activeDocument);
   const supported = isSupportedDocument(activeDocument);
+  const canEncrypt = supported && !encryptedOnDisk;
   const canPermanentDecrypt = supported && decryptedSession.has(uriKey);
 
   await vscode.commands.executeCommand('setContext', CONTEXT_SUPPORTED_DOCUMENT, supported);
   await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, isEncrypted);
+  await vscode.commands.executeCommand('setContext', CONTEXT_CAN_ENCRYPT_DOCUMENT, canEncrypt);
   await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, canPermanentDecrypt);
 };
 
@@ -312,7 +343,8 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
 // ?? Toolbar button injection entry:
 // The actual editor/title buttons are declared in package.json -> contributes.menus.editor/title.
 // This extension controls which button appears by updating these context keys:
-// `encryptedNotes.supportedDocument` and `encryptedNotes.isEncryptedDocument`.
+// `encryptedNotes.supportedDocument`, `encryptedNotes.isEncryptedDocument`,
+// `encryptedNotes.canEncryptDocument` and `encryptedNotes.canPermanentDecrypt`.
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
   context.subscriptions.push(
     vscode.commands.registerCommand('encrypted-notes.toggleEncryption', async () =>
@@ -328,15 +360,21 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       runCommandForActiveDocument('permanentDecrypt'),
     ),
     vscode.workspace.onDidOpenTextDocument((document) => {
-      void tryAutoDecrypt(document);
-      void updateEditorContext();
+      void (async () => {
+        await refreshEncryptedOnDiskState(document);
+        await tryAutoDecrypt(document);
+        await updateEditorContext();
+      })();
     }),
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) {
-        void tryAutoDecrypt(editor.document);
-      }
+      void (async () => {
+        if (editor) {
+          await refreshEncryptedOnDiskState(editor.document);
+          await tryAutoDecrypt(editor.document);
+        }
 
-      void updateEditorContext();
+        await updateEditorContext();
+      })();
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       const uriKey = getUriKey(event.document.uri);
@@ -391,6 +429,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         const plainTextToRestore = restorePlainTextAfterSave.get(uriKey);
 
         if (plainTextToRestore !== undefined) {
+          encryptedOnDiskState.set(uriKey, true);
           restorePlainTextAfterSave.delete(uriKey);
 
           const applied = await replaceDocumentText(document, plainTextToRestore);
@@ -401,9 +440,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
             decryptedSession.add(uriKey);
             vscode.window.setStatusBarMessage('Encrypted Notes: 已加密写入磁盘，编辑器已恢复明文。', 2200);
           }
-        } else if (isEncryptedText(document.getText())) {
-          decryptedSession.delete(uriKey);
-          vscode.window.setStatusBarMessage('Encrypted Notes: 文件已按加密格式保存。', 1800);
+        } else {
+          const encrypted = isEncryptedText(document.getText());
+          encryptedOnDiskState.set(uriKey, encrypted);
+
+          if (encrypted) {
+            decryptedSession.delete(uriKey);
+            vscode.window.setStatusBarMessage('Encrypted Notes: 文件已按加密格式保存。', 1800);
+          }
         }
 
         if (vscode.window.activeTextEditor?.document.uri.toString() === document.uri.toString()) {
@@ -417,6 +461,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       decryptedSession.delete(uriKey);
       skippedAutoDecrypt.delete(uriKey);
       decryptPromptInProgress.delete(uriKey);
+      encryptedOnDiskState.delete(uriKey);
 
       void updateEditorContext();
     }),
@@ -434,9 +479,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     }),
   );
 
+  const activeDocument = vscode.window.activeTextEditor?.document;
+  if (activeDocument) {
+    await refreshEncryptedOnDiskState(activeDocument);
+  }
+
   await updateEditorContext();
 
-  const activeDocument = vscode.window.activeTextEditor?.document;
   if (activeDocument) {
     await tryAutoDecrypt(activeDocument);
   }

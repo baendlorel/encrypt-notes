@@ -68,8 +68,8 @@
         "title": "%command.permanentDecryptCurrent.title%",
         "category": "%extension.category%",
         "icon": {
-          "light": "assets/unlock-light.svg",
-          "dark": "assets/unlock-dark.svg"
+          "light": "assets/permanent-unlock-light.svg",
+          "dark": "assets/permanent-unlock-dark.svg"
         }
       }
     ],
@@ -78,7 +78,7 @@
         {
           "command": "encrypted-notes.encryptCurrent",
           "group": "navigation@9",
-          "when": "editorTextFocus && encryptedNotes.supportedDocument && !encryptedNotes.isEncryptedDocument"
+          "when": "editorTextFocus && encryptedNotes.canEncryptDocument"
         },
         {
           "command": "encrypted-notes.decryptCurrent",
