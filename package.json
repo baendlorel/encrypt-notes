@@ -1,8 +1,8 @@
 {
-  "name": "colorful-markdown",
-  "displayName": "Colorful Markdown",
-  "description": "Color markdown elements with configurable background, color, decoration and font weight.",
-  "description_zh": "为 Markdown 元素上色，可配置 background、color、decoration、fontweight。",
+  "name": "encrypted-notes",
+  "displayName": "Encrypted Notes",
+  "description": "Encrypt and decrypt text files in VS Code with AES-256-GCM.",
+  "description_zh": "在 VS Code 中使用 AES-256-GCM 对文本文件进行加密与解密。",
   "version": "0.1.0",
   "purpose": "vscode-extension",
   "publisher": "KasukabeTsumugi",
@@ -17,21 +17,13 @@
     "Other"
   ],
   "keywords": [
-    "markdown",
-    "color",
-    "style",
-    "highlight",
-    "decoration",
-    "fontweight"
+    "encrypt",
+    "decrypt",
+    "aes",
+    "security",
+    "notes",
+    "text"
   ],
-  "homepage": "https://github.com/baendlorel/colorful-markdown#readme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/baendlorel/colorful-markdown.git"
-  },
-  "bugs": {
-    "url": "https://github.com/baendlorel/colorful-markdown/issues"
-  },
   "license": "MIT",
   "icon": "assets/logo.png",
   "galleryBanner": {
@@ -39,69 +31,97 @@
     "theme": "dark"
   },
   "activationEvents": [
-    "onLanguage:markdown",
-    "onCommand:colorful-markdown.refreshStyles",
-    "onCommand:colorful-markdown.openConfig"
+    "onStartupFinished",
+    "onCommand:encrypted-notes.toggleEncryption",
+    "onCommand:encrypted-notes.encryptCurrent",
+    "onCommand:encrypted-notes.decryptCurrent"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "colorful-markdown.refreshStyles",
-        "title": "%command.refreshStyles.title%",
+        "command": "encrypted-notes.toggleEncryption",
+        "title": "%command.toggleEncryption.title%",
         "category": "%extension.category%"
       },
       {
-        "command": "colorful-markdown.openConfig",
-        "title": "%command.openConfig.title%",
-        "category": "%extension.category%"
+        "command": "encrypted-notes.encryptCurrent",
+        "title": "%command.encryptCurrent.title%",
+        "category": "%extension.category%",
+        "icon": {
+          "light": "assets/lock.svg",
+          "dark": "assets/lock.svg"
+        }
+      },
+      {
+        "command": "encrypted-notes.decryptCurrent",
+        "title": "%command.decryptCurrent.title%",
+        "category": "%extension.category%",
+        "icon": {
+          "light": "assets/unlock.svg",
+          "dark": "assets/unlock.svg"
+        }
       }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "encrypted-notes.encryptCurrent",
+          "group": "navigation@9",
+          "when": "editorTextFocus && encryptedNotes.supportedDocument && !encryptedNotes.isEncryptedDocument"
+        },
+        {
+          "command": "encrypted-notes.decryptCurrent",
+          "group": "navigation@9",
+          "when": "editorTextFocus && encryptedNotes.supportedDocument && encryptedNotes.isEncryptedDocument"
+        }
+      ]
+    },
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
-        "colorful-markdown.enabled": {
+        "encrypted-notes.enabled": {
           "type": "boolean",
           "default": true,
           "description": "%configuration.enabled.description%"
         },
-        "colorful-markdown.styles": {
-          "type": "object",
-          "default": {},
-          "markdownDescription": "%configuration.styles.description%"
+        "encrypted-notes.fileExtensions": {
+          "type": "array",
+          "default": [
+            "txt",
+            "md",
+            "markdown",
+            "json",
+            "yaml",
+            "yml",
+            "ini",
+            "log",
+            "csv"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "%configuration.fileExtensions.description%"
         }
       }
     }
   },
   "scripts": {
     "lines": "clear && find ./src -type f \\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.mjs\" -o -name \"*.cjs\" -o -name \"*.cpp\" -o -name \"*.h\" -o -name \"*.py\"  -o -name \"*.css\" -o -name \"*.rs\" -o -name \"*.rc\" \\) | xargs wc -l",
-    "test-build": "rimraf out && export NODE_ENV=dev && tsx ./.scripts/rollup.ts",
-    "build": "rimraf out &&  tsx ./.scripts/rollup.ts",
-    "watch": "tsc -watch -p ./",
-    "check": "tsc -p tsconfig.build.json",
+    "test-build": "pnpm build",
+    "build": "rimraf out && tsc -p tsconfig.build.json",
+    "watch": "tsc -watch -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.build.json --noEmit",
     "lint": "oxlint .",
     "pub": "vsce package -o ./bin",
     "publish": "pnpm build && vsce publish"
   },
   "devDependencies": {
-    "@rollup/plugin-alias": "^5.1.1",
-    "@rollup/plugin-commonjs": "^28.0.6",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-replace": "^6.0.2",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^12.1.4",
     "@types/node": "^24.7.0",
     "@types/vscode": "^1.74.0",
     "@vscode/vsce": "^3.0.0",
     "oxlint": "^1.22.0",
     "rimraf": "^6.0.1",
-    "rollup": "^4.52.4",
-    "rollup-plugin-conditional-compilation": "^2.1.2",
-    "rollup-plugin-const-enum": "^1.1.5",
-    "rollup-plugin-dts": "^6.2.1",
-    "rollup-plugin-func-macro": "^1.2.2",
-    "tsc-alias": "^1.8.16",
-    "tslib": "^2.8.1",
     "typescript": "^5.9.3"
   }
 }

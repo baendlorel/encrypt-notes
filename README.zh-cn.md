@@ -1,91 +1,40 @@
-# Colorful Markdown
+# Encrypted Notes
 
-一个用于 VS Code 的 Markdown 元素上色插件。
+一个用于 VS Code 的文本文件加密/解密插件。
 
 ## 功能
 
-- 在 Markdown 编辑器中实时上色
-- 配置页面内置亮/暗预设：`One Dark/Light Colorful`、`GitHub Dark/Light Cool`、`Ayu Dark/Light Pastel`
-- 默认样式映射为空，需应用预设或手动设置后生效
-- 支持元素：
-  - `heading`
-  - `heading1`
-  - `heading2`
-  - `heading3`
-  - `heading4`
-  - `heading5`
-  - `heading6`
-  - `blockquote`
-  - `list`
-  - `bold`
-  - `italic`
-  - `strikethrough`
-  - `link`
-  - `inlineCode`
-  - `codeFence`
-- 每个元素可配置：
-  - `background`
-  - `color`
-  - `decoration`
-  - `fontweight`
-  - `fontstyle`
-  - `border`、`borderColor`、`borderRadius`、`borderStyle`、`borderWidth`
-  - `outline`、`outlineColor`、`outlineStyle`、`outlineWidth`
-  - `opacity`、`letterSpacing`
-  - `gutterIconPath`、`gutterIconSize`
-  - 嵌套 `before` / `after`（附加文本/图标与样式）
+- 在编辑器右上角（标题栏）提供锁/解锁按钮。
+- 支持对当前文件手动加密与解密。
+- 打开加密文件时自动弹窗输入密码。
+- 已解密内容在保存时会自动重新加密。
+- 支持配置可处理的文件扩展名（默认含 `txt`、`md`、`json`、`yaml` 等）。
 
-## 命令
+## 加密文件格式（v1）
 
-- `Colorful Markdown: Refresh Markdown Colors`
+```text
+#__ENCRYPTED_FILE__#
+{"v":1,"alg":"AES-256-GCM","kdf":"PBKDF2-SHA256","iter":210000,"salt":"...","iv":"...","tag":"..."}
+<base64 密文>
+```
 
-## 设置示例
+- 算法：`AES-256-GCM`
+- 密钥派生：`PBKDF2-HMAC-SHA256`
+
+## 设置项
 
 ```json
 {
-  "colorful-markdown.enabled": true,
-  "colorful-markdown.styles": {
-    "heading": {
-      "color": "#ff7f50",
-      "fontweight": "800",
-      "outline": "1px solid #ff7f5033",
-      "borderRadius": "3px",
-      "before": {
-        "contentText": "# ",
-        "color": "#ff7f50aa"
-      }
-    },
-    "blockquote": {
-      "color": "#6aa6ff",
-      "decoration": "underline wavy #6aa6ff66"
-    },
-    "italic": {
-      "color": "#2ec4b6",
-      "fontstyle": "italic"
-    },
-    "inlineCode": {
-      "background": "#1f1f1f66",
-      "color": "#9ef01a",
-      "fontweight": "600",
-      "border": "1px solid #9ef01a55",
-      "borderRadius": "4px"
-    },
-    "link": {
-      "color": "#4cc9f0",
-      "decoration": "underline",
-      "after": {
-        "contentText": " ->",
-        "color": "#4cc9f0aa",
-        "fontstyle": "italic",
-        "margin": "0 0 0 .2em"
-      }
-    }
-  }
+  "encrypted-notes.enabled": true,
+  "encrypted-notes.fileExtensions": ["txt", "md", "markdown", "json", "yaml", "yml", "ini", "log", "csv"]
 }
 ```
 
-`gutterIconPath` 需要是绝对路径（或 URI），用于在编辑器左侧 gutter 显示图标。
-`before` / `after` 支持：`contentText`、`contentIconPath`、`color`、`background`、`fontweight`、`fontstyle`、`decoration`、`border`、`borderColor`、`margin`、`width`、`height`。
+## 命令
+
+- `加密笔记: 加密/解密当前文件`
+- `加密笔记: 加密当前文件`
+- `加密笔记: 解密当前文件`
 
 ## 开发
 

@@ -1,3 +1,9 @@
 {
-  "extension.category": "Cryptonian"
+  "extension.category": "加密笔记",
+  "command.toggleEncryption.title": "加密/解密当前文件",
+  "command.encryptCurrent.title": "加密当前文件",
+  "command.decryptCurrent.title": "解密当前文件",
+  "configuration.title": "加密笔记",
+  "configuration.enabled.description": "启用加密文件处理能力。",
+  "configuration.fileExtensions.description": "需要处理的文件扩展名（不带点），例如 `[\"txt\", \"md\"]`。"
 }

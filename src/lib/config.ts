@@ -1,0 +1,45 @@
+import path from 'node:path';
+import * as vscode from 'vscode';
+
+export const EXTENSION_ID = 'encrypted-notes';
+
+const DEFAULT_FILE_EXTENSIONS = ['txt', 'md', 'markdown', 'json', 'yaml', 'yml', 'ini', 'log', 'csv'];
+
+export interface ExtensionConfig {
+  readonly enabled: boolean;
+  readonly fileExtensions: ReadonlySet<string>;
+}
+
+export const normalizeFileExtension = (value: string): string => value.trim().toLowerCase().replace(/^\./, '');
+
+export const getExtensionConfig = (): ExtensionConfig => {
+  const config = vscode.workspace.getConfiguration(EXTENSION_ID);
+  const enabled = config.get<boolean>('enabled', true);
+  const configured = config.get<string[]>('fileExtensions', DEFAULT_FILE_EXTENSIONS);
+  const normalized = configured
+    .map(normalizeFileExtension)
+    .filter((value) => value.length > 0);
+
+  return {
+    enabled,
+    fileExtensions: new Set(normalized),
+  };
+};
+
+export const getDocumentExtension = (document: vscode.TextDocument): string => {
+  const extension = path.extname(document.uri.fsPath);
+  return normalizeFileExtension(extension);
+};
+
+export const isSupportedByExtensionList = (document: vscode.TextDocument): boolean => {
+  if (document.uri.scheme !== 'file') {
+    return false;
+  }
+
+  const extension = getDocumentExtension(document);
+  if (extension.length === 0) {
+    return false;
+  }
+
+  return getExtensionConfig().fileExtensions.has(extension);
+};

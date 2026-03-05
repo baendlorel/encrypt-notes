@@ -1,10 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "target": "ES2021",
+    "module": "commonjs",
+    "moduleResolution": "node",
     "resolveJsonModule": false,
-    "resolvePackageJsonImports": true,
+    "resolvePackageJsonImports": false,
     "declaration": false,
-    "allowArbitraryExtensions": true
+    "allowArbitraryExtensions": true,
+    "outDir": "out",
+    "rootDir": "src"
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["tests/**/*", "plugins/**/*.ts", "node_modules", ".vscode-test"]

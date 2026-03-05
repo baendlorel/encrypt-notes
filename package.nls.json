@@ -1,3 +1,9 @@
 {
-  "extension.category": "Colorful Markdown"
+  "extension.category": "Encrypted Notes",
+  "command.toggleEncryption.title": "Toggle Encrypt/Decrypt",
+  "command.encryptCurrent.title": "Encrypt Current File",
+  "command.decryptCurrent.title": "Decrypt Current File",
+  "configuration.title": "Encrypted Notes",
+  "configuration.enabled.description": "Enable encrypted file handling.",
+  "configuration.fileExtensions.description": "File extensions to manage (without leading dots), for example `[\"txt\", \"md\"]`."
 }
