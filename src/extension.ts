@@ -33,6 +33,8 @@ const CODELENS_DECRYPT_COMMAND = 'encrypted-notes.codelensDecryptCurrent';
 
 const isChineseLanguage = (): boolean => vscode.env.language.toLowerCase().startsWith('zh');
 
+// const getCodeLensEncryptTitle = (): string => (isChineseLanguage() ? '$(lock)  加密' : '$(lock)  Encrypt');
+// const getCodeLensDecryptTitle = (): string => (isChineseLanguage() ? '$(unlock)  解密' : '$(unlock)  Decrypt');
 const getCodeLensEncryptTitle = (): string => (isChineseLanguage() ? '加密' : 'Encrypt');
 const getCodeLensDecryptTitle = (): string => (isChineseLanguage() ? '解密' : 'Decrypt');
 
