@@ -3,13 +3,13 @@ import * as vscode from 'vscode';
 import { getExtensionConfig, isSupportedByUriExtensionList } from './lib/config.js';
 import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
-
-const VIRTUAL_DOCUMENT_SCHEME = 'encrypted-notes-decrypted';
-
-const CONTEXT_SUPPORTED_DOCUMENT = 'encryptedNotes.supportedDocument';
-const CONTEXT_IS_ENCRYPTED_DOCUMENT = 'encryptedNotes.isEncryptedDocument';
-const CONTEXT_CAN_ENCRYPT_DOCUMENT = 'encryptedNotes.canEncryptDocument';
-const CONTEXT_CAN_PERMANENT_DECRYPT = 'encryptedNotes.canPermanentDecrypt';
+import {
+  CONTEXT_CAN_ENCRYPT_DOCUMENT,
+  CONTEXT_CAN_PERMANENT_DECRYPT,
+  CONTEXT_IS_ENCRYPTED_DOCUMENT,
+  CONTEXT_SUPPORTED_DOCUMENT,
+  VIRTUAL_DOCUMENT_SCHEME,
+} from './lib/consts.js';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>();
@@ -51,13 +51,9 @@ const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | undefined =
   }
 };
 
-const getSourceUri = (uri: vscode.Uri): vscode.Uri => {
-  return parseSourceUriFromVirtualUri(uri) ?? uri;
-};
+const getSourceUri = (uri: vscode.Uri): vscode.Uri => parseSourceUriFromVirtualUri(uri) ?? uri;
 
-const getSourceUriKey = (uri: vscode.Uri): string => {
-  return getUriKey(getSourceUri(uri));
-};
+const getSourceUriKey = (uri: vscode.Uri): string => getUriKey(getSourceUri(uri));
 
 const toVirtualUri = (sourceUri: vscode.Uri): vscode.Uri => {
   return sourceUri.with({
@@ -531,7 +527,10 @@ class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProvider {
 
   public readonly onDidChangeFile = this.changeEmitter.event;
 
-  public watch(_uri: vscode.Uri, _options: { readonly recursive: boolean; readonly excludes: readonly string[] }): vscode.Disposable {
+  public watch(
+    _uri: vscode.Uri,
+    _options: { readonly recursive: boolean; readonly excludes: readonly string[] },
+  ): vscode.Disposable {
     return new vscode.Disposable(() => {});
   }
 
@@ -662,11 +661,9 @@ const hasOpenTabForSource = (sourceUri: vscode.Uri): boolean => {
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
   context.subscriptions.push(
-    vscode.workspace.registerFileSystemProvider(
-      VIRTUAL_DOCUMENT_SCHEME,
-      new EncryptedVirtualFileSystemProvider(),
-      { isCaseSensitive: true },
-    ),
+    vscode.workspace.registerFileSystemProvider(VIRTUAL_DOCUMENT_SCHEME, new EncryptedVirtualFileSystemProvider(), {
+      isCaseSensitive: true,
+    }),
     vscode.commands.registerCommand('encrypted-notes.toggleEncryption', async () =>
       runCommandForActiveDocument('toggle'),
     ),
