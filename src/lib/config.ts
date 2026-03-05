@@ -30,19 +30,31 @@ export const getExtensionConfig = (): ExtensionConfig => {
 };
 
 export const getDocumentExtension = (document: vscode.TextDocument): string => {
-  const extension = path.extname(document.uri.fsPath);
+  return getUriExtension(document.uri);
+};
+
+export const getUriExtension = (uri: vscode.Uri): string => {
+  if (uri.scheme !== 'file') {
+    return '';
+  }
+
+  const extension = path.extname(uri.fsPath);
   return normalizeFileExtension(extension);
 };
 
-export const isSupportedByExtensionList = (document: vscode.TextDocument): boolean => {
-  if (document.uri.scheme !== 'file') {
+export const isSupportedByUriExtensionList = (uri: vscode.Uri): boolean => {
+  if (uri.scheme !== 'file') {
     return false;
   }
 
-  const extension = getDocumentExtension(document);
+  const extension = getUriExtension(uri);
   if (extension.length === 0) {
     return false;
   }
 
   return getExtensionConfig().fileExtensions.has(extension);
+};
+
+export const isSupportedByExtensionList = (document: vscode.TextDocument): boolean => {
+  return isSupportedByUriExtensionList(document.uri);
 };

@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 
-import { InvalidEncryptedFileError } from './errors.js';
+import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
 import {
   KEY_LENGTH,
   PBKDF2_DIGEST,
@@ -11,8 +11,6 @@ import {
   AES_ALGORITHM,
 } from './consts.js';
 import { EncryptedHeader, ParsedEncryptedFile } from './types.js';
-
-const stripBom = (value: string): string => value.replace(/^\uFEFF/, '');
 
 const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer => {
   return pbkdf2Sync(password, salt, iterations, KEY_LENGTH, PBKDF2_DIGEST);
@@ -139,6 +137,6 @@ export const decryptText = (content: string, password: string): string => {
     const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
     return plainText.toString('utf8');
   } catch {
-    throw new Error('[InvalidPasswordError] Password is incorrect or file is corrupted.');
+    throw new InvalidPasswordError('Password is incorrect or file is corrupted.');
   }
 };
