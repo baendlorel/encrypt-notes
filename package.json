@@ -77,18 +77,18 @@
       "editor/title": [
         {
           "command": "encrypted-notes.encryptCurrent",
-          "group": "navigation@9",
-          "when": "editorTextFocus && encryptedNotes.canEncryptDocument"
+          "group": "navigation@0",
+          "when": "encryptedNotes.canEncryptDocument"
         },
         {
           "command": "encrypted-notes.decryptCurrent",
-          "group": "navigation@9",
-          "when": "editorTextFocus && encryptedNotes.supportedDocument && encryptedNotes.isEncryptedDocument"
+          "group": "navigation@0",
+          "when": "encryptedNotes.supportedDocument && encryptedNotes.isEncryptedDocument"
         },
         {
           "command": "encrypted-notes.permanentDecryptCurrent",
-          "group": "navigation@10",
-          "when": "editorTextFocus && !encryptedNotes.isEncryptedDocument && encryptedNotes.canPermanentDecrypt"
+          "group": "navigation@1",
+          "when": "!encryptedNotes.isEncryptedDocument && encryptedNotes.canPermanentDecrypt"
         }
       ]
     },
@@ -105,13 +105,7 @@
           "default": [
             "txt",
             "md",
-            "markdown",
-            "json",
-            "yaml",
-            "yml",
-            "ini",
-            "log",
-            "csv"
+            "markdown"
           ],
           "items": {
             "type": "string"
