@@ -642,12 +642,22 @@ class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProvider {
   }
 }
 
-const hasOpenDocumentForSource = (sourceUri: vscode.Uri): boolean => {
+const hasOpenTabForSource = (sourceUri: vscode.Uri): boolean => {
   const sourceUriKey = getUriKey(sourceUri);
 
-  return vscode.workspace.textDocuments.some((document) => {
-    return getSourceUriKey(document.uri) === sourceUriKey;
-  });
+  for (const group of vscode.window.tabGroups.all) {
+    for (const tab of group.tabs) {
+      if (!(tab.input instanceof vscode.TabInputText)) {
+        continue;
+      }
+
+      if (getSourceUriKey(tab.input.uri) === sourceUriKey) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 };
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
@@ -718,7 +728,17 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       const sourceUri = getSourceUri(document.uri);
       const sourceKey = getUriKey(sourceUri);
 
-      if (!hasOpenDocumentForSource(sourceUri)) {
+      if (isVirtualDocument(document)) {
+        passwordCache.delete(sourceKey);
+        decryptedSession.delete(sourceKey);
+        skippedAutoDecrypt.delete(sourceKey);
+        decryptPromptInProgress.delete(sourceKey);
+        encryptedOnDiskState.delete(sourceKey);
+        void updateEditorContext();
+        return;
+      }
+
+      if (!hasOpenTabForSource(sourceUri)) {
         passwordCache.delete(sourceKey);
         decryptedSession.delete(sourceKey);
         skippedAutoDecrypt.delete(sourceKey);
