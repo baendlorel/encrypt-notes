@@ -267,6 +267,10 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
   }
 };
 
+// ?? Toolbar button injection entry:
+// The actual editor/title buttons are declared in package.json -> contributes.menus.editor/title.
+// This extension controls which button appears by updating these context keys:
+// `encryptedNotes.supportedDocument` and `encryptedNotes.isEncryptedDocument`.
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
   context.subscriptions.push(
     vscode.commands.registerCommand('encrypted-notes.toggleEncryption', async () =>
@@ -300,6 +304,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         void updateEditorContext();
       }
     }),
+    // ?? Save trigger (before write): intercept save and auto-encrypt via event.waitUntil.
     vscode.workspace.onWillSaveTextDocument((event) => {
       const document = event.document;
       const uriKey = getUriKey(document.uri);
@@ -314,8 +319,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       }
 
       if (isEncryptedText(document.getText())) {
+        vscode.window.showInformationMessage('文件已经是加密过的：' + document.getText());
         decryptedSession.delete(uriKey);
         return;
+      } else {
+        vscode.window.showInformationMessage('正在自动加密文件...');
       }
 
       event.waitUntil(
@@ -326,6 +334,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         })(),
       );
     }),
+    // ?? Save trigger (after write): update session state and refresh command visibility.
     vscode.workspace.onDidSaveTextDocument((document) => {
       const uriKey = getUriKey(document.uri);
 
