@@ -1,42 +1,16 @@
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 
-const AES_ALGORITHM = 'aes-256-gcm';
-const PBKDF2_DIGEST = 'sha256';
-const KEY_LENGTH = 32;
-const SALT_LENGTH = 16;
-const IV_LENGTH = 12;
-const PBKDF2_ITERATIONS = 210000;
-
-export const ENCRYPTED_FILE_MAGIC = '#__ENCRYPTED_FILE__#';
-
-interface EncryptedHeader {
-  readonly v: number;
-  readonly alg: string;
-  readonly kdf: string;
-  readonly iter: number;
-  readonly salt: string;
-  readonly iv: string;
-  readonly tag: string;
-}
-
-interface ParsedEncryptedFile {
-  readonly header: EncryptedHeader;
-  readonly ciphertext: Buffer;
-}
-
-export class InvalidEncryptedFileError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = 'InvalidEncryptedFileError';
-  }
-}
-
-export class InvalidPasswordError extends Error {
-  public constructor(message = 'Invalid password.') {
-    super(message);
-    this.name = 'InvalidPasswordError';
-  }
-}
+import { InvalidEncryptedFileError } from './errors.js';
+import {
+  KEY_LENGTH,
+  PBKDF2_DIGEST,
+  ENCRYPTED_FILE_FLAG,
+  SALT_LENGTH,
+  IV_LENGTH,
+  PBKDF2_ITERATIONS,
+  AES_ALGORITHM,
+} from './consts.js';
+import { EncryptedHeader, ParsedEncryptedFile } from './types.js';
 
 const stripBom = (value: string): string => value.replace(/^\uFEFF/, '');
 
@@ -90,10 +64,14 @@ const parseHeader = (rawHeader: string): EncryptedHeader => {
   };
 };
 
-export const isEncryptedText = (content: string): boolean => {
-  const firstLine = stripBom(content.split(/\r?\n/, 1)[0] ?? '');
-  return firstLine === ENCRYPTED_FILE_MAGIC;
-};
+/**
+ * & First 2 lines may contains the ENCRYPTED_FILE_FLAG
+ */
+export const isEncryptedText = (content: string): boolean =>
+  content
+    .split(/\r?\n/, 1)
+    .slice(0, 2)
+    .some((line) => line.includes(ENCRYPTED_FILE_FLAG));
 
 const parseEncryptedText = (content: string): ParsedEncryptedFile => {
   if (!isEncryptedText(content)) {
@@ -139,7 +117,7 @@ export const encryptText = (plainText: string, password: string): string => {
     tag: tag.toString('base64'),
   };
 
-  return [ENCRYPTED_FILE_MAGIC, JSON.stringify(header), ciphertext.toString('base64')].join('\n');
+  return [ENCRYPTED_FILE_FLAG, JSON.stringify(header), ciphertext.toString('base64')].join('\n');
 };
 
 export const decryptText = (content: string, password: string): string => {
@@ -161,6 +139,6 @@ export const decryptText = (content: string, password: string): string => {
     const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
     return plainText.toString('utf8');
   } catch {
-    throw new InvalidPasswordError('Password is incorrect or file is corrupted.');
+    throw new Error('[InvalidPasswordError] Password is incorrect or file is corrupted.');
   }
 };

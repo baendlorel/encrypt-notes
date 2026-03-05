@@ -49,8 +49,8 @@
         "title": "%command.encryptCurrent.title%",
         "category": "%extension.category%",
         "icon": {
-          "light": "assets/lock.svg",
-          "dark": "assets/lock.svg"
+          "light": "assets/lock-light.svg",
+          "dark": "assets/lock-dark.svg"
         }
       },
       {
@@ -58,8 +58,8 @@
         "title": "%command.decryptCurrent.title%",
         "category": "%extension.category%",
         "icon": {
-          "light": "assets/unlock.svg",
-          "dark": "assets/unlock.svg"
+          "light": "assets/unlock-light.svg",
+          "dark": "assets/unlock-dark.svg"
         }
       }
     ],

@@ -1,13 +1,8 @@
 import * as vscode from 'vscode';
 
-import { getExtensionConfig, isSupportedByExtensionList } from './lib/config';
-import {
-  decryptText,
-  encryptText,
-  InvalidEncryptedFileError,
-  InvalidPasswordError,
-  isEncryptedText,
-} from './lib/crypto';
+import { getExtensionConfig, isSupportedByExtensionList } from './lib/config.js';
+import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
+import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
 
 const CONTEXT_SUPPORTED_DOCUMENT = 'encryptedNotes.supportedDocument';
 const CONTEXT_IS_ENCRYPTED_DOCUMENT = 'encryptedNotes.isEncryptedDocument';
@@ -38,7 +33,11 @@ const isSupportedDocument = (document: vscode.TextDocument): boolean => {
     return false;
   }
 
-  return isEncryptedText(document.getText()) || isSupportedByExtensionList(document) || decryptedSession.has(getUriKey(document.uri));
+  return (
+    isEncryptedText(document.getText()) ||
+    isSupportedByExtensionList(document) ||
+    decryptedSession.has(getUriKey(document.uri))
+  );
 };
 
 const promptPassword = async (prompt: string): Promise<string | undefined> => {
@@ -81,7 +80,7 @@ const updateEditorContext = async (): Promise<void> => {
 const decryptWithPassword = async (
   document: vscode.TextDocument,
   password: string,
-  showSuccessMessage: boolean
+  showSuccessMessage: boolean,
 ): Promise<boolean> => {
   const uriKey = getUriKey(document.uri);
 
@@ -270,9 +269,15 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
   context.subscriptions.push(
-    vscode.commands.registerCommand('encrypted-notes.toggleEncryption', async () => runCommandForActiveDocument('toggle')),
-    vscode.commands.registerCommand('encrypted-notes.encryptCurrent', async () => runCommandForActiveDocument('encrypt')),
-    vscode.commands.registerCommand('encrypted-notes.decryptCurrent', async () => runCommandForActiveDocument('decrypt')),
+    vscode.commands.registerCommand('encrypted-notes.toggleEncryption', async () =>
+      runCommandForActiveDocument('toggle'),
+    ),
+    vscode.commands.registerCommand('encrypted-notes.encryptCurrent', async () =>
+      runCommandForActiveDocument('encrypt'),
+    ),
+    vscode.commands.registerCommand('encrypted-notes.decryptCurrent', async () =>
+      runCommandForActiveDocument('decrypt'),
+    ),
     vscode.workspace.onDidOpenTextDocument((document) => {
       void tryAutoDecrypt(document);
       void updateEditorContext();
@@ -318,7 +323,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
           const encryptedContent = encryptText(document.getText(), password);
           decryptedSession.delete(uriKey);
           return [vscode.TextEdit.replace(getDocumentRange(document), encryptedContent)];
-        })()
+        })(),
       );
     }),
     vscode.workspace.onDidSaveTextDocument((document) => {
@@ -353,7 +358,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       if (activeDocument) {
         void tryAutoDecrypt(activeDocument);
       }
-    })
+    }),
   );
 
   await updateEditorContext();
