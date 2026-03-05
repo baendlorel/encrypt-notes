@@ -197,7 +197,8 @@ const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
     }
   }
 
-  const encryptedContent = encryptText(document.getText(), password);
+  const plainTextToRestore = document.getText();
+  const encryptedContent = encryptText(plainTextToRestore, password);
   const applied = await replaceDocumentText(document, encryptedContent);
 
   if (!applied) {
@@ -208,8 +209,15 @@ const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
   decryptedSession.delete(uriKey);
   passwordCache.set(uriKey, password);
 
+  if (shouldRestorePlainTextAfterSave()) {
+    restorePlainTextAfterSave.set(uriKey, plainTextToRestore);
+  } else {
+    restorePlainTextAfterSave.delete(uriKey);
+  }
+
   const saved = await document.save();
   if (!saved) {
+    restorePlainTextAfterSave.delete(uriKey);
     showError('文件加密成功，但自动保存失败，请手动保存。');
   } else {
     showInfo('已加密并保存当前文件。');
