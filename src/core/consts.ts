@@ -16,7 +16,6 @@ export namespace Consts {
   /**
    * Virtual document scheme used for decrypted content.
    */
-  export const VDocScheme = 'encrypted-notes-decrypted';
   export const UTF8_BOM = '\uFEFF';
 }
 

@@ -2,7 +2,7 @@ import vscode from 'vscode';
 import type { DecryptTextFn, EncryptTextFn, IsEncryptedTextFn } from './types.js';
 
 import { t } from '../i18n/index.js';
-import { Consts } from './consts.js';
+import { ve } from '@/virtual-edit/methods.js';
 
 const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
 
@@ -28,7 +28,7 @@ const getRequiredSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri => {
 };
 
 export const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | undefined => {
-  if (uri.scheme !== Consts.VDocScheme || uri.query.length === 0) {
+  if (uri.scheme !== ve.Scheme || uri.query.length === 0) {
     return undefined;
   }
 
@@ -43,28 +43,28 @@ export const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | unde
 
 export const getSourceUri = (uri: vscode.Uri): vscode.Uri => parseSourceUriFromVirtualUri(uri) ?? uri;
 
-export const getSourceUriKey = (uri: vscode.Uri): string => getUriKey(getSourceUri(uri));
+export const getSourceUriKey = (uri: vscode.Uri): string => ve.getUriKey(getSourceUri(uri));
 
 export const toVirtualUri = (sourceUri: vscode.Uri): vscode.Uri => {
   return sourceUri.with({
-    scheme: Consts.VDocScheme,
-    path: getVirtualDisplayPath(sourceUri),
+    scheme: ve.Scheme,
+    path: ve.getVirtualDisplayPath(sourceUri),
     query: encodeURIComponent(sourceUri.toString()),
     fragment: '',
   });
 };
 
 export const isVirtualDocument = (document: vscode.TextDocument): boolean => {
-  return document.uri.scheme === Consts.VDocScheme;
+  return document.uri.scheme === ve.Scheme;
 };
 
 const getTabsForUri = (uri: vscode.Uri): vscode.Tab[] => {
-  const uriKey = getUriKey(uri);
+  const uriKey = ve.getUriKey(uri);
   const tabs: vscode.Tab[] = [];
 
   for (const group of vscode.window.tabGroups.all) {
     for (const tab of group.tabs) {
-      if (tab.input instanceof vscode.TabInputText && getUriKey(tab.input.uri) === uriKey) {
+      if (tab.input instanceof vscode.TabInputText && ve.getUriKey(tab.input.uri) === uriKey) {
         tabs.push(tab);
       }
     }
@@ -83,7 +83,7 @@ export const closeTabsForUri = async (uri: vscode.Uri): Promise<void> => {
 };
 
 export const hasOpenTabForSource = (sourceUri: vscode.Uri): boolean => {
-  const sourceUriKey = getUriKey(sourceUri);
+  const sourceUriKey = ve.getUriKey(sourceUri);
 
   for (const group of vscode.window.tabGroups.all) {
     for (const tab of group.tabs) {
@@ -145,7 +145,7 @@ export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProv
 
   public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
     const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    const sourceKey = getUriKey(sourceUri);
+    const sourceKey = ve.getUriKey(sourceUri);
     const raw = await vscode.workspace.fs.readFile(sourceUri);
     const content = Buffer.from(raw).toString('utf8');
 
@@ -179,7 +179,7 @@ export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProv
     },
   ): Promise<void> {
     const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    const sourceKey = getUriKey(sourceUri);
+    const sourceKey = ve.getUriKey(sourceUri);
     const password = this.passwordCache.get(sourceKey);
 
     if (!password) {
