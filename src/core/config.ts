@@ -21,8 +21,17 @@ class EncryptNotesConfiguration {
   /**
    * Whether the given file extension is supported by the current configuration.
    */
-  supports(fileExtension: string): boolean {
-    return this.fileExtensions.has(fileExtension);
+  supports(fileExtension: string): boolean;
+  supports(uri: vscode.Uri): boolean;
+  supports(args: string | vscode.Uri): boolean {
+    if (typeof args !== 'string') {
+      if (args.scheme !== 'file') {
+        return false;
+      }
+      args = path.extname(args.fsPath).toLowerCase();
+    }
+
+    return this.fileExtensions.has(args);
   }
 
   get buttonOnFirstLine(): boolean {
@@ -35,10 +44,3 @@ class EncryptNotesConfiguration {
 }
 
 export const configs = new EncryptNotesConfiguration();
-
-export const isSupportedByUri = (uri: vscode.Uri): boolean => {
-  if (uri.scheme !== 'file') {
-    return false;
-  }
-  return configs.supports(path.extname(uri.fsPath));
-};

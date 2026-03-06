@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { Commands, Consts, ContextKey } from './core/consts.js';
-import { configs, isSupportedByUri } from './core/config.js';
+import { configs } from './core/config.js';
 import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
 import { t } from './i18n/index.js';
@@ -114,7 +114,7 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
 
     // fixme 这里的函数嵌套复杂得一团乱麻
     const sourceUri = getSourceUri(document.uri);
-    if (sourceUri.scheme !== 'file' || !isSupportedByUri(sourceUri)) {
+    if (!configs.supports(sourceUri)) {
       return [];
     }
 
@@ -165,7 +165,7 @@ const isSupportedDocument = (document: vscode.TextDocument): boolean => {
   return (
     getEncryptedOnDiskState(document) ||
     isEncryptedText(document.getText()) ||
-    isSupportedByUri(sourceUri) ||
+    configs.supports(sourceUri) ||
     decryptedSession.has(sourceKey)
   );
 };
@@ -318,7 +318,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   const sourceUri = getSourceUri(document.uri);
   const sourceKey = getUriKey(sourceUri);
 
-  if (!isSupportedByUri(sourceUri)) {
+  if (!configs.supports(sourceUri)) {
     showError(t('error.encrypt.unsupportedExtension'));
     return;
   }

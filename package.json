@@ -32,22 +32,15 @@
   },
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:encrypted-notes.toggleEncryption",
-    "onCommand:encrypted-notes.encryptCurrent",
-    "onCommand:encrypted-notes.decryptCurrent",
-    "onCommand:encrypted-notes.permanentDecryptCurrent"
+    "onCommand:encrypted-notes.encrypt",
+    "onCommand:encrypted-notes.decrypt"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "encrypted-notes.toggleEncryption",
-        "title": "%command.toggleEncryption.title%",
-        "category": "%extension.category%"
-      },
-      {
-        "command": "encrypted-notes.encryptCurrent",
-        "title": "%command.encryptCurrent.title%",
+        "command": "encrypted-notes.encrypt",
+        "title": "%command.encrypt.title%",
         "category": "%extension.category%",
         "icon": {
           "light": "assets/lock-light.svg",
@@ -55,17 +48,8 @@
         }
       },
       {
-        "command": "encrypted-notes.decryptCurrent",
-        "title": "%command.decryptCurrent.title%",
-        "category": "%extension.category%",
-        "icon": {
-          "light": "assets/unlock-light.svg",
-          "dark": "assets/unlock-dark.svg"
-        }
-      },
-      {
-        "command": "encrypted-notes.permanentDecryptCurrent",
-        "title": "%command.permanentDecryptCurrent.title%",
+        "command": "encrypted-notes.decrypt",
+        "title": "%command.decrypt.title%",
         "category": "%extension.category%",
         "icon": {
           "light": "assets/unlock-light.svg",
@@ -76,12 +60,12 @@
     "menus": {
       "editor/title": [
         {
-          "command": "encrypted-notes.encryptCurrent",
+          "command": "encrypted-notes.encrypt",
           "group": "navigation@0",
           "when": "encryptedNotes.showTitleActions && encryptedNotes.canEncryptDocument"
         },
         {
-          "command": "encrypted-notes.permanentDecryptCurrent",
+          "command": "encrypted-notes.decrypt",
           "group": "navigation@0",
           "when": "encryptedNotes.showTitleActions && encryptedNotes.canDecryptDocument"
         }
@@ -94,8 +78,7 @@
           "type": "array",
           "default": [
             "txt",
-            "md",
-            "markdown"
+            "md"
           ],
           "items": {
             "type": "string"
@@ -104,7 +87,7 @@
         },
         "encrypted-notes.actionButtonLocation": {
           "type": "string",
-          "default": "firstLine",
+          "default": "%configuration.actionButtonLocation.firstLine.value%",
           "enum": [
             "%configuration.actionButtonLocation.firstLine.value%",
             "%configuration.actionButtonLocation.editorTitle.value%"

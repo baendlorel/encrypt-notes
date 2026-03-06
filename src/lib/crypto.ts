@@ -1,16 +1,14 @@
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
-import { AesConfig } from '../core/consts.js';
+import { AesConfig, Consts } from '../core/consts.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
-
-const UTF8_BOM = '\uFEFF';
 
 const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer => {
   return pbkdf2Sync(password, salt, iterations, AesConfig.KeyLength, AesConfig.Pbkdf2Digest);
 };
 
-const stripUtf8Bom = (line: string): string => (line.startsWith(UTF8_BOM) ? line.slice(1) : line);
+const stripUtf8Bom = (line: string): string => (line.startsWith(Consts.UTF8_BOM) ? line.slice(1) : line);
 
 const findEncryptedFlagLineIndex = (lines: readonly string[]): number => {
   const maxLineCount = Math.min(2, lines.length);

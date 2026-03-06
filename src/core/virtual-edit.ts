@@ -27,21 +27,6 @@ const getRequiredSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri => {
   return sourceUri;
 };
 
-export const getUriKey = (uri: vscode.Uri): string => uri.toString();
-
-export const getVirtualDisplayPath = (sourceUri: vscode.Uri): string => {
-  const sourcePath = sourceUri.path;
-  const lastSlash = sourcePath.lastIndexOf('/');
-  const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
-  const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
-
-  if (filename.length === 0) {
-    return sourcePath;
-  }
-
-  return `${directoryPath}${t('virtual.displayPrefixDecrypted')}${filename}`;
-};
-
 export const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | undefined => {
   if (uri.scheme !== Consts.VDocScheme || uri.query.length === 0) {
     return undefined;
