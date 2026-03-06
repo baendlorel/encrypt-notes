@@ -12,7 +12,7 @@ class EncryptNotesConfiguration {
     this.config = vscode.workspace.getConfiguration(Consts.ExtensionId);
 
     const rawFileExtensions = this.config.get<string[]>('fileExtensions', Configs.DefaultFileExtensions);
-    this.fileExtensions = new Set(rawFileExtensions.map(normalizeFileExt).filter(Boolean));
+    this.fileExtensions = new Set(rawFileExtensions.map((v) => v.trim().toLowerCase()).filter(Boolean));
 
     const rawActionButtonLocation = this.config.get<string>('actionButtonLocation');
     this.actionButtonLocation = Configs.justifyActionButtonLocation(rawActionButtonLocation);
@@ -36,34 +36,9 @@ class EncryptNotesConfiguration {
 
 export const configs = new EncryptNotesConfiguration();
 
-export const normalizeFileExt = (value: string): string => value.trim().toLowerCase().replace(/^\./, '');
-
-export const getDocumentExtension = (document: vscode.TextDocument): string => {
-  return getUriExtension(document.uri);
-};
-
-export const getUriExtension = (uri: vscode.Uri): string => {
-  if (uri.scheme !== 'file') {
-    return '';
-  }
-
-  const extension = path.extname(uri.fsPath);
-  return normalizeFileExt(extension);
-};
-
-export const isSupportedByUriExtensionList = (uri: vscode.Uri): boolean => {
+export const isSupportedByUri = (uri: vscode.Uri): boolean => {
   if (uri.scheme !== 'file') {
     return false;
   }
-
-  const extension = getUriExtension(uri);
-  if (extension.length === 0) {
-    return false;
-  }
-
-  return configs.supports(extension);
-};
-
-export const isSupportedByExtensionList = (document: vscode.TextDocument): boolean => {
-  return isSupportedByUriExtensionList(document.uri);
+  return configs.supports(path.extname(uri.fsPath));
 };
