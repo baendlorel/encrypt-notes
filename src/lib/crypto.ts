@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
-import { AesConfig } from './consts.js';
+import { AesConfig } from '../core/consts.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
 
 const UTF8_BOM = '\uFEFF';

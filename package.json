@@ -90,11 +90,6 @@
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
-        "encrypted-notes.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "%configuration.enabled.description%"
-        },
         "encrypted-notes.fileExtensions": {
           "type": "array",
           "default": [

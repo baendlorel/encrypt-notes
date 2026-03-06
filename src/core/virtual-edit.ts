@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { t } from '../i18n/index.js';
-import { Consts.VDocScheme } from '../lib/consts.js';
+import { Consts } from './consts.js';
 
 type DecryptTextFn = (content: string, password: string) => string;
 type EncryptTextFn = (plainText: string, password: string) => string;
