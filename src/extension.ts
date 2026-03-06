@@ -15,7 +15,7 @@ import {
   isVirtualDocument,
   toVirtualUri,
 } from './core/virtual-edit.js';
-import { vsc } from './core/native.js';
+import { vsc } from './core/methods.js';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>();
@@ -303,7 +303,7 @@ const tryDecryptDocument = async (document: vscode.TextDocument, showSuccessMess
   return openVirtualEditor(document, password, showSuccessMessage);
 };
 
-const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<void> => {
+const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   if (isVirtualDocument(document)) {
     const saved = await document.save();
     if (saved) {
@@ -363,21 +363,7 @@ const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
   }
 };
 
-const decryptCurrentDocument = async (document: vscode.TextDocument): Promise<void> => {
-  if (isVirtualDocument(document)) {
-    showInfo(t('info.decrypt.alreadyVirtual'));
-    return;
-  }
-
-  if (!isEncryptedText(document.getText())) {
-    showInfo(t('info.decrypt.notEncrypted'));
-    return;
-  }
-
-  await tryDecryptDocument(document);
-};
-
-const permanentlyDecryptCurrentDocument = async (document: vscode.TextDocument): Promise<void> => {
+const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   const sourceUri = getSourceUri(document.uri);
   const sourceKey = getUriKey(sourceUri);
 
@@ -455,7 +441,7 @@ const runCommandForDocument = async (document: vscode.TextDocument, mode: 'encry
   }
 
   if (mode === 'encrypt') {
-    await encryptCurrentDocument(document);
+    await encrypt(document);
     await updateEditorContext();
     return;
   }
@@ -465,7 +451,7 @@ const runCommandForDocument = async (document: vscode.TextDocument, mode: 'encry
     if (!confirmed) {
       return;
     }
-    await decryptCurrentDocument(document);
+    await decrypt(document);
     await updateEditorContext();
     return;
   }
@@ -547,6 +533,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       [{ scheme: 'file' }, { scheme: Consts.VDocScheme }],
       new EncryptionCodeLensProvider(),
     ),
+    // todo 这里为什么这么复杂？
     vscode.commands.registerCommand('encrypted-notes.encrypt', () => runCommandForActiveDocument('encrypt')),
     vscode.commands.registerCommand('encrypted-notes.decrypt', () => runCommandForActiveDocument('decrypt')),
     vscode.workspace.onDidOpenTextDocument(async (document) => {

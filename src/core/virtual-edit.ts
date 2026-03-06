@@ -1,11 +1,8 @@
-import * as vscode from 'vscode';
+import vscode from 'vscode';
+import type { DecryptTextFn, EncryptTextFn, IsEncryptedTextFn } from './types.js';
 
 import { t } from '../i18n/index.js';
 import { Consts } from './consts.js';
-
-type DecryptTextFn = (content: string, password: string) => string;
-type EncryptTextFn = (plainText: string, password: string) => string;
-type IsEncryptedTextFn = (content: string) => boolean;
 
 const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
 
