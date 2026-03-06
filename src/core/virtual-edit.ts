@@ -7,6 +7,11 @@ type DecryptTextFn = (content: string, password: string) => string;
 type EncryptTextFn = (plainText: string, password: string) => string;
 type IsEncryptedTextFn = (content: string) => boolean;
 
+const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
+
+const hasUtf8Bom = (content: Uint8Array): boolean =>
+  content.length >= 3 && content[0] === 0xef && content[1] === 0xbb && content[2] === 0xbf;
+
 interface VirtualEditProviderDeps {
   passwordCache: Map<string, string>;
   encryptedOnDiskState: Map<string, boolean>;
@@ -216,8 +221,19 @@ export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProv
 
     const plainText = Buffer.from(content).toString('utf8');
     const encryptedContent = this.encryptText(plainText, password);
+    const encryptedRaw = Buffer.from(encryptedContent, 'utf8');
+    let nextRaw = encryptedRaw;
 
-    await vscode.workspace.fs.writeFile(sourceUri, Buffer.from(encryptedContent, 'utf8'));
+    if (sourceExists) {
+      try {
+        const sourceRaw = await vscode.workspace.fs.readFile(sourceUri);
+        if (hasUtf8Bom(sourceRaw)) {
+          nextRaw = Buffer.concat([UTF8_BOM_BUFFER, encryptedRaw]);
+        }
+      } catch {}
+    }
+
+    await vscode.workspace.fs.writeFile(sourceUri, nextRaw);
     this.encryptedOnDiskState.set(sourceKey, true);
     this.decryptedSession.add(sourceKey);
 

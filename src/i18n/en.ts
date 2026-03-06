@@ -24,13 +24,14 @@ export const en: typeof zh = {
   'error.permanentDecrypt.saveFailed': 'File was decrypted, but auto save failed. Please save manually.',
   'error.extension.disabled': 'Extension is currently disabled. Please enable encrypted-notes.enabled first.',
   'error.noActiveEditor': 'No active editor is available.',
-  'info.decrypt.openVirtualSuccess': 'Decrypted successfully. You are now in decrypted editing view; save will encrypt back to disk.',
-  'info.encrypt.savedFromVirtual': 'You are in decrypted editing view. Content has been saved to disk in encrypted format.',
+  'info.decrypt.openVirtualSuccess':
+    'Decrypted successfully. You are now in decrypted editing view; save will encrypt back to disk.',
+  'info.encrypt.savedFromVirtual':
+    'You are in decrypted editing view. Content is saved in encrypted format (only supports UTF-8).',
   'info.encrypt.alreadyEncrypted': 'Current file is already encrypted.',
   'info.encrypt.savedAndContinueDecrypted':
-    'Encrypted and saved. Continuing in decrypted editing view.',
-  'info.decrypt.alreadyVirtual':
-    'You are already in decrypted editing view; save will encrypt back to disk.',
+    'Encrypted and saved. Continuing in decrypted editing view (only supports UTF-8).',
+  'info.decrypt.alreadyVirtual': 'You are already in decrypted editing view; save will encrypt back to disk.',
   'info.decrypt.notEncrypted': 'Current file is not in encrypted format.',
   'info.permanentDecrypt.saved': 'Permanently decrypted and saved. Future saves will no longer auto-encrypt.',
   'info.permanentDecrypt.notNeeded': 'Current file is not in an auto-encryption session. No permanent decrypt needed.',

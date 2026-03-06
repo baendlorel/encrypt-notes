@@ -12,8 +12,25 @@ import {
 } from './consts.js';
 import { EncryptedHeader, ParsedEncryptedFile } from './types.js';
 
+const UTF8_BOM = '\uFEFF';
+
 const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer => {
   return pbkdf2Sync(password, salt, iterations, KEY_LENGTH, PBKDF2_DIGEST);
+};
+
+const stripUtf8Bom = (line: string): string => (line.startsWith(UTF8_BOM) ? line.slice(1) : line);
+
+const findEncryptedFlagLineIndex = (lines: readonly string[]): number => {
+  const maxLineCount = Math.min(2, lines.length);
+
+  for (let i = 0; i < maxLineCount; i++) {
+    const normalizedLine = stripUtf8Bom(lines[i] ?? '').trim();
+    if (normalizedLine.startsWith(ENCRYPTED_FILE_FLAG)) {
+      return i;
+    }
+  }
+
+  return -1;
 };
 
 const parseHeader = (rawHeader: string): EncryptedHeader => {
@@ -63,26 +80,27 @@ const parseHeader = (rawHeader: string): EncryptedHeader => {
 };
 
 /**
- * & First 2 lines may contains the ENCRYPTED_FILE_FLAG
+ * First 2 lines may contain ENCRYPTED_FILE_FLAG.
+ * Detection is strict: strip UTF-8 BOM, trim, then startsWith flag.
  */
 export const isEncryptedText = (content: string): boolean =>
-  content
-    .split(/\r?\n/, 1)
-    .slice(0, 2)
-    .some((line) => line.includes(ENCRYPTED_FILE_FLAG));
+  findEncryptedFlagLineIndex(content.split(/\r?\n/)) !== -1;
 
 const parseEncryptedText = (content: string): ParsedEncryptedFile => {
-  if (!isEncryptedText(content)) {
+  const lines = content.split(/\r?\n/);
+  const markerLineIndex = findEncryptedFlagLineIndex(lines);
+  if (markerLineIndex < 0) {
     throw new InvalidEncryptedFileError('Missing encrypted file marker.');
   }
 
-  const lines = content.split(/\r?\n/);
-  if (lines.length < 3) {
+  const headerLineIndex = markerLineIndex + 1;
+  const payloadStartLineIndex = markerLineIndex + 2;
+  if (lines.length <= payloadStartLineIndex) {
     throw new InvalidEncryptedFileError('Encrypted file is incomplete.');
   }
 
-  const header = parseHeader(lines[1] ?? '');
-  const cipherTextPayload = lines.slice(2).join('').trim();
+  const header = parseHeader(stripUtf8Bom(lines[headerLineIndex] ?? ''));
+  const cipherTextPayload = lines.slice(payloadStartLineIndex).join('').trim();
 
   if (cipherTextPayload.length === 0) {
     throw new InvalidEncryptedFileError('Encrypted payload is empty.');
