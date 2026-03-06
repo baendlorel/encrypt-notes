@@ -49,6 +49,6 @@ export namespace Configs {
 }
 
 export namespace Commands {
-  export const Encrypt = 'encrypted-notes.codelensEncryptCurrent';
-  export const Decrypt = 'encrypted-notes.codelensDecryptCurrent';
+  export const Encrypt = 'encrypted-notes.encrypt';
+  export const Decrypt = 'encrypted-notes.decrypt';
 }

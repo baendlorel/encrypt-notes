@@ -494,6 +494,9 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
 };
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
+  // Load configurations
+  configs.update();
+
   context.subscriptions.push(
     codeLensChangeEmitter,
     vscode.workspace.registerFileSystemProvider(
