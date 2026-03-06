@@ -445,8 +445,8 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
   }
 };
 
-const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
-  if (document.uri.scheme !== 'file') {
+const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => {
+  if (document?.uri.scheme !== 'file') {
     return;
   }
 
@@ -506,7 +506,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       [{ scheme: 'file' }, { scheme: ve.Scheme }],
       new EncryptionCodeLensProvider(),
     ),
-    // todo 这里为什么这么复杂？
     vscode.commands.registerCommand('encrypted-notes.encrypt', () => handleActiveDocument('encrypt')),
     vscode.commands.registerCommand('encrypted-notes.decrypt', () => handleActiveDocument('decrypt')),
     vscode.workspace.onDidOpenTextDocument(async (document) => {
@@ -524,7 +523,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       if (vscode.window.activeTextEditor?.document.uri.toString() === event.document.uri.toString()) {
-        void updateEditorContext();
+        updateEditorContext();
       }
     }),
     vscode.workspace.onDidSaveTextDocument(async (document) => {
@@ -551,7 +550,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         skippedAutoDecrypt.delete(sourceKey);
         decryptPromptInProgress.delete(sourceKey);
         encryptedOnDiskState.delete(sourceKey);
-        void updateEditorContext();
+        updateEditorContext();
         return;
       }
 
@@ -561,23 +560,21 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         skippedAutoDecrypt.delete(sourceKey);
         decryptPromptInProgress.delete(sourceKey);
         encryptedOnDiskState.delete(sourceKey);
-        void updateEditorContext();
+        updateEditorContext();
         return;
       }
 
-      void updateEditorContext();
+      updateEditorContext();
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (!event.affectsConfiguration('encrypted-notes')) {
         return;
       }
 
-      void updateEditorContext();
+      updateEditorContext();
 
       const activeDocument = vscode.window.activeTextEditor?.document;
-      if (activeDocument) {
-        void tryAutoDecrypt(activeDocument);
-      }
+      tryAutoDecrypt(activeDocument);
     }),
   );
 
@@ -588,9 +585,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
   await updateEditorContext();
 
-  if (activeDocument) {
-    await tryAutoDecrypt(activeDocument);
-  }
+  await tryAutoDecrypt(activeDocument);
 };
 
 export const deactivate = (): void => {};
