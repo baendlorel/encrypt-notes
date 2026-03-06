@@ -5,15 +5,7 @@ import { configs } from './core/config.js';
 import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
 import { t } from './i18n/index.js';
-import {
-  closeTabsForUri,
-  EncryptedVirtualFileSystemProvider,
-  getSourceUri,
-  getSourceUriKey,
-  hasOpenTabForSource,
-  isVirtualDocument,
-  toVirtualUri,
-} from './virtual-edit/virtual-edit.js';
+import { ve.closeTabsForUri, EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
 
@@ -68,7 +60,7 @@ const confirmPermanentDecrypt = async (): Promise<boolean> => {
 };
 
 const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promise<void> => {
-  const sourceUri = getSourceUri(document.uri);
+  const sourceUri = ve.getSourceUri(document.uri);
   if (sourceUri.scheme !== 'file') {
     return;
   }
@@ -87,14 +79,14 @@ const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promi
 };
 
 const getEncryptedOnDiskState = (document: vscode.TextDocument): boolean => {
-  const sourceKey = getSourceUriKey(document.uri);
+  const sourceKey = ve.getSourceUriKey(document.uri);
   const cached = encryptedOnDiskState.get(sourceKey);
 
   if (cached !== undefined) {
     return cached;
   }
 
-  if (isVirtualDocument(document)) {
+  if (ve.isVirtual(document)) {
     return true;
   }
 
@@ -110,7 +102,7 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     // fixme 这里的函数嵌套复杂得一团乱麻
-    const sourceUri = getSourceUri(document.uri);
+    const sourceUri = ve.getSourceUri(document.uri);
     if (!configs.supports(sourceUri)) {
       return [];
     }
@@ -118,7 +110,7 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
     const isSourceFile = document.uri.scheme === 'file';
     const encryptedOnDisk = getEncryptedOnDiskState(document);
     const canEncrypt = isSourceFile && !encryptedOnDisk;
-    const canDecrypt = (isSourceFile && encryptedOnDisk) || isVirtualDocument(document);
+    const canDecrypt = (isSourceFile && encryptedOnDisk) || ve.isVirtual(document);
 
     if (!canEncrypt && !canDecrypt) {
       return [];
@@ -152,12 +144,12 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
 }
 
 const isSupportedDocument = (document: vscode.TextDocument): boolean => {
-  const sourceUri = getSourceUri(document.uri);
+  const sourceUri = ve.getSourceUri(document.uri);
   if (sourceUri.scheme !== 'file') {
     return false;
   }
 
-  const sourceKey = getSourceUriKey(document.uri);
+  const sourceKey = ve.getSourceUriKey(document.uri);
 
   return (
     getEncryptedOnDiskState(document) ||
@@ -204,13 +196,13 @@ const updateEditorContext = async (): Promise<void> => {
     return;
   }
 
-  const sourceKey = getSourceUriKey(activeDocument.uri);
+  const sourceKey = ve.getSourceUriKey(activeDocument.uri);
   const supported = isSupportedDocument(activeDocument);
   const encryptedOnDisk = getEncryptedOnDiskState(activeDocument); // todo 疑似和上面的supported重复判定
   const encryptedInEditor = isEncryptedText(activeDocument.getText());
   const isSourceFile = activeDocument.uri.scheme === 'file';
   const canEncrypt = supported && !encryptedOnDisk;
-  const canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || isVirtualDocument(activeDocument));
+  const canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || ve.isVirtual(activeDocument));
   const canPermanentDecrypt = supported && encryptedOnDisk && decryptedSession.has(sourceKey);
 
   await vsc.setContext(ContextKey.SupportedDocument, supported);
@@ -240,7 +232,7 @@ const openVirtualEditor = async (
   password: string,
   showSuccessMessage: boolean,
 ): Promise<boolean> => {
-  const sourceUri = getSourceUri(sourceDocument.uri);
+  const sourceUri = ve.getSourceUri(sourceDocument.uri);
   const sourceKey = ve.getUriKey(sourceUri);
 
   if (sourceUri.scheme !== 'file') {
@@ -261,11 +253,11 @@ const openVirtualEditor = async (
     skippedAutoDecrypt.delete(sourceKey);
     encryptedOnDiskState.set(sourceKey, true);
 
-    const virtualUri = toVirtualUri(sourceUri);
+    const virtualUri = ve.toVirtualUri(sourceUri);
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
     const virtualDocument = await vscode.workspace.openTextDocument(virtualUri);
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
-    await closeTabsForUri(sourceUri);
+    await ve.closeTabsForUri(sourceUri);
 
     if (showSuccessMessage) {
       showInfo(t('info.decrypt.openVirtualSuccess'));
@@ -279,7 +271,7 @@ const openVirtualEditor = async (
 };
 
 const tryDecryptDocument = async (document: vscode.TextDocument, showSuccessMessage = true): Promise<boolean> => {
-  const sourceKey = getSourceUriKey(document.uri);
+  const sourceKey = ve.getSourceUriKey(document.uri);
 
   if (!isEncryptedText(document.getText())) {
     return false;
@@ -301,7 +293,7 @@ const tryDecryptDocument = async (document: vscode.TextDocument, showSuccessMess
 };
 
 const encrypt = async (document: vscode.TextDocument): Promise<void> => {
-  if (isVirtualDocument(document)) {
+  if (ve.isVirtual(document)) {
     const saved = await document.save();
     if (saved) {
       showInfo(t('info.encrypt.savedFromVirtual'));
@@ -312,7 +304,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
     return;
   }
 
-  const sourceUri = getSourceUri(document.uri);
+  const sourceUri = ve.getSourceUri(document.uri);
   const sourceKey = ve.getUriKey(sourceUri);
 
   if (!configs.supports(sourceUri)) {
@@ -361,10 +353,10 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 };
 
 const decrypt = async (document: vscode.TextDocument): Promise<void> => {
-  const sourceUri = getSourceUri(document.uri);
+  const sourceUri = ve.getSourceUri(document.uri);
   const sourceKey = ve.getUriKey(sourceUri);
 
-  if (isVirtualDocument(document)) {
+  if (ve.isVirtual(document)) {
     const plainText = document.getText();
 
     try {
@@ -385,7 +377,7 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
       preview: false,
       viewColumn: vscode.window.activeTextEditor?.viewColumn,
     });
-    await closeTabsForUri(document.uri);
+    await ve.closeTabsForUri(document.uri);
 
     showInfo(t('info.permanentDecrypt.saved'));
     return;
@@ -432,7 +424,7 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
 };
 
 const runCommandForDocument = async (document: vscode.TextDocument, mode: 'encrypt' | 'decrypt'): Promise<void> => {
-  if (document.uri.scheme !== 'file' && !isVirtualDocument(document)) {
+  if (document.uri.scheme !== 'file' && !ve.isVirtual(document)) {
     showError(t('error.onlyLocalFile'));
     return;
   }
@@ -491,7 +483,7 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
   }
 
   const activeDocument = vscode.window.activeTextEditor?.document;
-  if (!activeDocument || getSourceUriKey(activeDocument.uri) !== sourceKey) {
+  if (!activeDocument || ve.getSourceUriKey(activeDocument.uri) !== sourceKey) {
     return;
   }
 
@@ -514,7 +506,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     codeLensChangeEmitter,
     vscode.workspace.registerFileSystemProvider(
       ve.Scheme,
-      new EncryptedVirtualFileSystemProvider({
+      new EncryptNotesProvider({
         passwordCache,
         encryptedOnDiskState,
         decryptedSession,
@@ -559,8 +551,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.onDidSaveTextDocument(async (document) => {
       await refreshEncryptedOnDiskState(document);
 
-      const sourceKey = getSourceUriKey(document.uri);
-      if (document.uri.scheme === ve.Scheme) {
+      const sourceKey = ve.getSourceUriKey(document.uri);
+      if (ve.isVirtual(document)) {
         encryptedOnDiskState.set(sourceKey, true);
         decryptedSession.add(sourceKey);
         vscode.window.setStatusBarMessage(t('status.savedEncrypted'), 1600);
@@ -571,10 +563,10 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     vscode.workspace.onDidCloseTextDocument((document) => {
-      const sourceUri = getSourceUri(document.uri);
+      const sourceUri = ve.getSourceUri(document.uri);
       const sourceKey = ve.getUriKey(sourceUri);
 
-      if (isVirtualDocument(document)) {
+      if (ve.isVirtual(document)) {
         passwordCache.delete(sourceKey);
         decryptedSession.delete(sourceKey);
         skippedAutoDecrypt.delete(sourceKey);
@@ -584,12 +576,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         return;
       }
 
-      if (!hasOpenTabForSource(sourceUri)) {
+      if (!ve.hasOpenTabForSource(sourceUri)) {
         passwordCache.delete(sourceKey);
         decryptedSession.delete(sourceKey);
         skippedAutoDecrypt.delete(sourceKey);
         decryptPromptInProgress.delete(sourceKey);
         encryptedOnDiskState.delete(sourceKey);
+        void updateEditorContext();
+        return;
       }
 
       void updateEditorContext();

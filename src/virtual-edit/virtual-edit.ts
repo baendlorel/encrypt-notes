@@ -18,7 +18,7 @@ interface VirtualEditProviderDeps {
 }
 
 const getRequiredSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri => {
-  const sourceUri = parseSourceUriFromVirtualUri(uri);
+  const sourceUri = ve.toSourceUri(uri);
   if (!sourceUri) {
     throw vscode.FileSystemError.FileNotFound(uri);
   }
@@ -26,80 +26,7 @@ const getRequiredSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri => {
   return sourceUri;
 };
 
-export const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | undefined => {
-  if (uri.scheme !== ve.Scheme || uri.query.length === 0) {
-    return undefined;
-  }
-
-  try {
-    const decoded = decodeURIComponent(uri.query);
-    const parsed = vscode.Uri.parse(decoded);
-    return parsed.scheme === 'file' ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-export const getSourceUri = (uri: vscode.Uri): vscode.Uri => parseSourceUriFromVirtualUri(uri) ?? uri;
-
-export const getSourceUriKey = (uri: vscode.Uri): string => ve.getUriKey(getSourceUri(uri));
-
-export const toVirtualUri = (sourceUri: vscode.Uri): vscode.Uri => {
-  return sourceUri.with({
-    scheme: ve.Scheme,
-    path: ve.getVirtualDisplayPath(sourceUri),
-    query: encodeURIComponent(sourceUri.toString()),
-    fragment: '',
-  });
-};
-
-export const isVirtualDocument = (document: vscode.TextDocument): boolean => {
-  return document.uri.scheme === ve.Scheme;
-};
-
-const getTabsForUri = (uri: vscode.Uri): vscode.Tab[] => {
-  const uriKey = ve.getUriKey(uri);
-  const tabs: vscode.Tab[] = [];
-
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      if (tab.input instanceof vscode.TabInputText && ve.getUriKey(tab.input.uri) === uriKey) {
-        tabs.push(tab);
-      }
-    }
-  }
-
-  return tabs;
-};
-
-export const closeTabsForUri = async (uri: vscode.Uri): Promise<void> => {
-  const tabs = getTabsForUri(uri);
-  if (tabs.length === 0) {
-    return;
-  }
-
-  await vscode.window.tabGroups.close(tabs, true);
-};
-
-export const hasOpenTabForSource = (sourceUri: vscode.Uri): boolean => {
-  const sourceUriKey = ve.getUriKey(sourceUri);
-
-  for (const group of vscode.window.tabGroups.all) {
-    for (const tab of group.tabs) {
-      if (!(tab.input instanceof vscode.TabInputText)) {
-        continue;
-      }
-
-      if (getSourceUriKey(tab.input.uri) === sourceUriKey) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-};
-
-export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProvider {
+export class EncryptNotesProvider implements vscode.FileSystemProvider {
   private readonly changeEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
   private readonly passwordCache: Map<string, string>;
