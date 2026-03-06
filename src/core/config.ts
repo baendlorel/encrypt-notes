@@ -18,7 +18,6 @@ class EncryptNotesConfiguration {
         .map((v) => (v.startsWith('.') ? v : '.' + v))
         .filter(Boolean),
     );
-    vscode.window.showInformationMessage(`rawFileExtensions [${rawFileExtensions.join(', ')}]`);
 
     const rawActionButtonLocation = this.config.get<string>('actionButtonLocation');
     this.actionButtonLocation = Configs.justifyActionButtonLocation(rawActionButtonLocation);
@@ -34,9 +33,6 @@ class EncryptNotesConfiguration {
       if (args.scheme !== 'file') {
         return false;
       }
-      vscode.window.showInformationMessage(
-        `Checking support for file extension: ${path.extname(args.fsPath).toLowerCase()}, in [${[...this.fileExtensions].join(', ')}]`,
-      );
 
       args = path.extname(args.fsPath).toLowerCase();
     }
