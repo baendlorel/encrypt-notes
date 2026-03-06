@@ -1,9 +1,9 @@
 import vscode from 'vscode';
-import type { DecryptTextFn, EncryptTextFn, IsEncryptedTextFn } from '@/core/types.js';
-import { Consts } from '@/core/consts.js';
+import type { DecryptTextFn, EncryptTextFn, IsEncryptedTextFn } from '../core/types.js';
+import { Consts } from '../core/consts.js';
 
-import { t } from '@/i18n/index.js';
-import { ve } from '@/virtual-edit/methods.js';
+import { t } from '../i18n/index.js';
+import { ve } from '../virtual-edit/methods.js';
 
 const hasUtf8Bom = (content: Uint8Array): boolean =>
   content.length >= 3 && content[0] === 0xef && content[1] === 0xbb && content[2] === 0xbf;

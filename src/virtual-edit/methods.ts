@@ -1,5 +1,5 @@
 import vscode from 'vscode';
-import { t } from '@/i18n/index.js';
+import { t } from '../i18n/index.js';
 
 export namespace ve {
   export const Scheme = 'encrypted-notes-decrypted';

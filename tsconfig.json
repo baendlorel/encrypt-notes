@@ -10,10 +10,7 @@
     "esModuleInterop": true,
     "strict": true,
     "outDir": "out",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "baseUrl": "."
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "tests/**/*.ts"]
 }

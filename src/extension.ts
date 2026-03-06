@@ -5,9 +5,9 @@ import { configs } from './core/config.js';
 import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
 import { t } from './i18n/index.js';
-import { ve.closeTabsForUri, EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
+import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>();
@@ -27,14 +27,6 @@ const triggerCodeLensRefresh = (): void => {
 
 const getDocumentRange = (document: vscode.TextDocument): vscode.Range => {
   return new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
-};
-
-const showError = (message: string): void => {
-  void vscode.window.showErrorMessage(message);
-};
-
-const showInfo = (message: string): void => {
-  void vscode.window.showInformationMessage(message);
 };
 
 const confirmPermanentDecrypt = async (): Promise<boolean> => {
@@ -215,16 +207,16 @@ const updateEditorContext = async (): Promise<void> => {
 
 const showDecryptError = (error: unknown): void => {
   if (error instanceof InvalidPasswordError) {
-    showError(t('error.decrypt.invalidPassword'));
+    vsc.showError(t('error.decrypt.invalidPassword'));
     return;
   }
 
   if (error instanceof InvalidEncryptedFileError) {
-    showError(t('error.decrypt.invalidFile', error.message));
+    vsc.showError(t('error.decrypt.invalidFile', error.message));
     return;
   }
 
-  showError(t('error.decrypt.failed'));
+  vsc.showError(t('error.decrypt.failed'));
 };
 
 const openVirtualEditor = async (
@@ -236,7 +228,7 @@ const openVirtualEditor = async (
   const sourceKey = ve.getUriKey(sourceUri);
 
   if (sourceUri.scheme !== 'file') {
-    showError(t('error.onlyLocalFile'));
+    vsc.showError(t('error.onlyLocalFile'));
     return false;
   }
 
@@ -260,12 +252,12 @@ const openVirtualEditor = async (
     await ve.closeTabsForUri(sourceUri);
 
     if (showSuccessMessage) {
-      showInfo(t('info.decrypt.openVirtualSuccess'));
+      vsc.showInfo(t('info.decrypt.openVirtualSuccess'));
     }
 
     return true;
   } catch {
-    showError(t('error.decrypt.openVirtualFailed'));
+    vsc.showError(t('error.decrypt.openVirtualFailed'));
     return false;
   }
 };
@@ -296,9 +288,9 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   if (ve.isVirtual(document)) {
     const saved = await document.save();
     if (saved) {
-      showInfo(t('info.encrypt.savedFromVirtual'));
+      vsc.showInfo(t('info.encrypt.savedFromVirtual'));
     } else {
-      showError(t('error.save.retry'));
+      vsc.showError(t('error.save.retry'));
     }
 
     return;
@@ -308,12 +300,12 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   const sourceKey = ve.getUriKey(sourceUri);
 
   if (!configs.supports(sourceUri)) {
-    showError(t('error.encrypt.unsupportedExtension'));
+    vsc.showError(t('error.encrypt.unsupportedExtension'));
     return;
   }
 
   if (isEncryptedText(document.getText())) {
-    showInfo(t('info.encrypt.alreadyEncrypted'));
+    vsc.showInfo(t('info.encrypt.alreadyEncrypted'));
     return;
   }
 
@@ -330,13 +322,13 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   const applied = await replaceDocumentText(document, encryptedContent);
 
   if (!applied) {
-    showError(t('error.encrypt.applyFailed'));
+    vsc.showError(t('error.encrypt.applyFailed'));
     return;
   }
 
   const saved = await document.save();
   if (!saved) {
-    showError(t('error.encrypt.saveFailed'));
+    vsc.showError(t('error.encrypt.saveFailed'));
     return;
   }
 
@@ -348,7 +340,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   const encryptedDocument = await vscode.workspace.openTextDocument(sourceUri);
   const opened = await openVirtualEditor(encryptedDocument, password, false);
   if (opened) {
-    showInfo(t('info.encrypt.savedAndContinueDecrypted'));
+    vsc.showInfo(t('info.encrypt.savedAndContinueDecrypted'));
   }
 };
 
@@ -362,7 +354,7 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
     try {
       await vscode.workspace.fs.writeFile(sourceUri, Buffer.from(plainText, 'utf8'));
     } catch {
-      showError(t('error.permanentDecrypt.writePlainFailed'));
+      vsc.showError(t('error.permanentDecrypt.writePlainFailed'));
       return;
     }
 
@@ -379,12 +371,12 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
     });
     await ve.closeTabsForUri(document.uri);
 
-    showInfo(t('info.permanentDecrypt.saved'));
+    vsc.showInfo(t('info.permanentDecrypt.saved'));
     return;
   }
 
   if (!isEncryptedText(document.getText())) {
-    showInfo(t('info.permanentDecrypt.notNeeded'));
+    vsc.showInfo(t('info.permanentDecrypt.notNeeded'));
     return;
   }
 
@@ -404,13 +396,13 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
 
   const applied = await replaceDocumentText(document, plainText);
   if (!applied) {
-    showError(t('error.permanentDecrypt.applyFailed'));
+    vsc.showError(t('error.permanentDecrypt.applyFailed'));
     return;
   }
 
   const saved = await document.save();
   if (!saved) {
-    showError(t('error.permanentDecrypt.saveFailed'));
+    vsc.showError(t('error.permanentDecrypt.saveFailed'));
     return;
   }
 
@@ -420,12 +412,12 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   decryptPromptInProgress.delete(sourceKey);
   encryptedOnDiskState.set(sourceKey, false);
 
-  showInfo(t('info.permanentDecrypt.saved'));
+  vsc.showInfo(t('info.permanentDecrypt.saved'));
 };
 
 const runCommandForDocument = async (document: vscode.TextDocument, mode: 'encrypt' | 'decrypt'): Promise<void> => {
   if (document.uri.scheme !== 'file' && !ve.isVirtual(document)) {
-    showError(t('error.onlyLocalFile'));
+    vsc.showError(t('error.onlyLocalFile'));
     return;
   }
 
@@ -457,7 +449,7 @@ const runCommandForDocument = async (document: vscode.TextDocument, mode: 'encry
 const runCommandForActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> => {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
-    showError(t('error.noActiveEditor'));
+    vsc.showError(t('error.noActiveEditor'));
     return;
   }
 
