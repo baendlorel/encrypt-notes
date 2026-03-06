@@ -8,4 +8,6 @@ export namespace vsc {
   export const showError = (message: string) => vscode.window.showErrorMessage(message);
 
   export const showInfo = (message: string) => vscode.window.showInformationMessage(message);
+
+  export const setStatusBar = (message: string) => vscode.window.setStatusBarMessage(message, 3200);
 }

@@ -9,6 +9,7 @@ export const en: typeof zh = {
   'confirm.permanentDecrypt.cancel': 'Cancel',
   'prompt.decryptPassword': 'Enter password to decrypt',
   'prompt.encryptPassword': 'Enter password to encrypt',
+  'prompt.permanentDecryptConfirmPassword': 'Please re-enter password to confirm permanent unlock',
   'prompt.passwordRequired': 'Password cannot be empty.',
   'error.decrypt.invalidPassword': 'Invalid password. Failed to decrypt.',
   'error.decrypt.invalidFile': 'File format is corrupted or unsupported: {{0}}',

@@ -29,28 +29,6 @@ const getDocumentRange = (document: vscode.TextDocument): vscode.Range => {
   return new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
 };
 
-const confirmPermanentDecrypt = async (): Promise<boolean> => {
-  const selected = await vscode.window.showQuickPick(
-    [
-      {
-        label: t('confirm.permanentDecrypt.continue'),
-        description: t('confirm.permanentDecrypt.optionDescription'),
-        value: 'continue',
-      },
-      {
-        label: t('confirm.permanentDecrypt.cancel'),
-        value: 'cancel',
-      },
-    ],
-    {
-      title: t('confirm.permanentDecrypt.title'),
-      ignoreFocusOut: true,
-    },
-  );
-
-  return selected?.value === 'continue';
-};
-
 const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promise<void> => {
   const sourceUri = ve.getSourceUri(document.uri);
   if (sourceUri.scheme !== 'file') {
@@ -93,7 +71,6 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
       return [];
     }
 
-    // fixme 这里的函数嵌套复杂得一团乱麻
     const sourceUri = ve.getSourceUri(document.uri);
     if (!configs.supports(sourceUri)) {
       return [];
@@ -164,6 +141,42 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
   }
 
   return password;
+};
+
+const confirmPermanentDecryptByPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
+  const password = await promptPassword(t('prompt.permanentDecryptConfirmPassword'));
+  if (!password) {
+    return undefined;
+  }
+
+  const sourceUri = ve.getSourceUri(document.uri);
+  const sourceKey = ve.getUriKey(sourceUri);
+  const cachedPassword = passwordCache.get(sourceKey);
+
+  if (cachedPassword && cachedPassword === password) {
+    return password;
+  }
+
+  let encryptedContent: string;
+  if (ve.isVirtual(document)) {
+    try {
+      const sourceRaw = await vscode.workspace.fs.readFile(sourceUri);
+      encryptedContent = Buffer.from(sourceRaw).toString('utf8');
+    } catch {
+      vsc.showError(t('error.decrypt.failed'));
+      return undefined;
+    }
+  } else {
+    encryptedContent = document.getText();
+  }
+
+  try {
+    decryptText(encryptedContent, password);
+    return password;
+  } catch (error) {
+    showDecryptError(error);
+    return undefined;
+  }
 };
 
 const replaceDocumentText = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
@@ -260,7 +273,7 @@ const openVirtualEditor = async (
     await ve.closeTabsForUri(sourceUri);
 
     if (showSuccessMessage) {
-      vsc.showInfo(t('info.decrypt.openVirtualSuccess'));
+      vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
     }
 
     return true;
@@ -296,7 +309,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   if (ve.isVirtual(document)) {
     const saved = await document.save();
     if (saved) {
-      vsc.showInfo(t('info.encrypt.savedFromVirtual'));
+      vsc.setStatusBar(t('info.encrypt.savedFromVirtual'));
     } else {
       vsc.showError(t('error.save.retry'));
     }
@@ -313,7 +326,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   }
 
   if (isEncryptedText(document.getText())) {
-    vsc.showInfo(t('info.encrypt.alreadyEncrypted'));
+    vsc.setStatusBar(t('info.encrypt.alreadyEncrypted'));
     return;
   }
 
@@ -348,7 +361,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   const encryptedDocument = await vscode.workspace.openTextDocument(sourceUri);
   const opened = await openVirtualEditor(encryptedDocument, password, false);
   if (opened) {
-    vsc.showInfo(t('info.encrypt.savedAndContinueDecrypted'));
+    vsc.setStatusBar(t('info.encrypt.savedAndContinueDecrypted'));
   }
 };
 
@@ -379,12 +392,12 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
     });
     await ve.closeTabsForUri(document.uri);
 
-    vsc.showInfo(t('info.permanentDecrypt.saved'));
+    vsc.setStatusBar(t('info.permanentDecrypt.saved'));
     return;
   }
 
   if (!isEncryptedText(document.getText())) {
-    vsc.showInfo(t('info.permanentDecrypt.notNeeded'));
+    vsc.setStatusBar(t('info.permanentDecrypt.notNeeded'));
     return;
   }
 
@@ -420,7 +433,7 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   decryptPromptInProgress.delete(sourceKey);
   encryptedOnDiskState.set(sourceKey, false);
 
-  vsc.showInfo(t('info.permanentDecrypt.saved'));
+  vsc.setStatusBar(t('info.permanentDecrypt.saved'));
 };
 
 const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> => {
@@ -443,10 +456,17 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
   }
 
   if (mode === 'decrypt') {
-    const confirmed = await confirmPermanentDecrypt();
-    if (!confirmed) {
+    if (!ve.isVirtual(document) && !isEncryptedText(document.getText())) {
+      vsc.setStatusBar(t('info.permanentDecrypt.notNeeded'));
       return;
     }
+
+    const confirmedPassword = await confirmPermanentDecryptByPassword(document);
+    if (!confirmedPassword) {
+      return;
+    }
+
+    passwordCache.set(ve.getSourceUriKey(document.uri), confirmedPassword);
     await decrypt(document);
     await updateEditorContext();
     return;
