@@ -8,6 +8,7 @@ import { t } from './i18n/index.js';
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
 import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
+import { MarkdownImagePreview } from './virtual-edit/preview-image.js';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>();
@@ -485,8 +486,10 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
   // Load configurations
   configs.update();
+  const markdownImagePreview = new MarkdownImagePreview();
 
   context.subscriptions.push(
+    markdownImagePreview,
     codeLensChangeEmitter,
     vscode.workspace.registerFileSystemProvider(
       ve.Scheme,
