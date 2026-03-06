@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { t } from '../i18n/index.js';
-import { VIRTUAL_DOCUMENT_SCHEME } from '../lib/consts.js';
+import { Consts.VDocScheme } from '../lib/consts.js';
 
 type DecryptTextFn = (content: string, password: string) => string;
 type EncryptTextFn = (plainText: string, password: string) => string;
@@ -46,7 +46,7 @@ export const getVirtualDisplayPath = (sourceUri: vscode.Uri): string => {
 };
 
 export const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | undefined => {
-  if (uri.scheme !== VIRTUAL_DOCUMENT_SCHEME || uri.query.length === 0) {
+  if (uri.scheme !== Consts.VDocScheme || uri.query.length === 0) {
     return undefined;
   }
 
@@ -65,7 +65,7 @@ export const getSourceUriKey = (uri: vscode.Uri): string => getUriKey(getSourceU
 
 export const toVirtualUri = (sourceUri: vscode.Uri): vscode.Uri => {
   return sourceUri.with({
-    scheme: VIRTUAL_DOCUMENT_SCHEME,
+    scheme: Consts.VDocScheme,
     path: getVirtualDisplayPath(sourceUri),
     query: encodeURIComponent(sourceUri.toString()),
     fragment: '',
@@ -73,7 +73,7 @@ export const toVirtualUri = (sourceUri: vscode.Uri): vscode.Uri => {
 };
 
 export const isVirtualDocument = (document: vscode.TextDocument): boolean => {
-  return document.uri.scheme === VIRTUAL_DOCUMENT_SCHEME;
+  return document.uri.scheme === Consts.VDocScheme;
 };
 
 const getTabsForUri = (uri: vscode.Uri): vscode.Tab[] => {

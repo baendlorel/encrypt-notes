@@ -29,8 +29,7 @@
 ```json
 {
   "encrypted-notes.enabled": true,
-  "encrypted-notes.fileExtensions": ["txt", "md", "markdown", "json", "yaml", "yml", "ini", "log", "csv"],
-  "encrypted-notes.restorePlainTextAfterSave": true
+  "encrypted-notes.fileExtensions": ["txt", "md"]
 }
 ```
 

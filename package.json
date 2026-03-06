@@ -107,11 +107,6 @@
           },
           "markdownDescription": "%configuration.fileExtensions.description%"
         },
-        "encrypted-notes.restorePlainTextAfterSave": {
-          "type": "boolean",
-          "default": true,
-          "description": "%configuration.restorePlainTextAfterSave.description%"
-        },
         "encrypted-notes.actionButtonLocation": {
           "type": "string",
           "default": "firstLine",

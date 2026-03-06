@@ -1,41 +1,31 @@
 import path from 'node:path';
-import * as vscode from 'vscode';
-
-export const EXTENSION_ID = 'encrypted-notes';
-
-const DEFAULT_FILE_EXTENSIONS = ['txt', 'md', 'markdown', 'json', 'yaml', 'yml', 'ini', 'log', 'csv'];
-export type ActionButtonLocation = 'firstLine' | 'editorTitle';
-const DEFAULT_ACTION_BUTTON_LOCATION: ActionButtonLocation = 'firstLine';
-
-const isActionButtonLocation = (value: string): value is ActionButtonLocation =>
-  value === 'firstLine' || value === 'editorTitle';
+import vscode from 'vscode';
+import type { ActionButtonLocation } from './types.js';
+import { Defaults, Consts } from './consts.js';
 
 export interface ExtensionConfig {
   readonly enabled: boolean;
   readonly fileExtensions: ReadonlySet<string>;
-  readonly restorePlainTextAfterSave: boolean;
   readonly actionButtonLocation: ActionButtonLocation;
 }
 
 export const normalizeFileExtension = (value: string): string => value.trim().toLowerCase().replace(/^\./, '');
 
 export const getExtensionConfig = (): ExtensionConfig => {
-  const config = vscode.workspace.getConfiguration(EXTENSION_ID);
+  const config = vscode.workspace.getConfiguration(Consts.ExtensionId);
   const enabled = config.get<boolean>('enabled', true);
-  const configured = config.get<string[]>('fileExtensions', DEFAULT_FILE_EXTENSIONS);
-  const restorePlainTextAfterSave = config.get<boolean>('restorePlainTextAfterSave', true);
-  const configuredActionButtonLocation = config.get<string>('actionButtonLocation', DEFAULT_ACTION_BUTTON_LOCATION);
-  const actionButtonLocation = isActionButtonLocation(configuredActionButtonLocation)
+  const configured = config.get<string[]>('fileExtensions', Defaults.FileExtensions);
+
+  const configuredActionButtonLocation = config.get<string>('actionButtonLocation', Defaults.ActionButtonLocation);
+  const actionButtonLocation = Defaults.isActionButtonLocation(configuredActionButtonLocation)
     ? configuredActionButtonLocation
-    : DEFAULT_ACTION_BUTTON_LOCATION;
-  const normalized = configured
-    .map(normalizeFileExtension)
-    .filter((value) => value.length > 0);
+    : Defaults.ActionButtonLocation;
+
+  const normalized = configured.map(normalizeFileExtension).filter((value) => value.length > 0);
 
   return {
     enabled,
     fileExtensions: new Set(normalized),
-    restorePlainTextAfterSave,
     actionButtonLocation,
   };
 };
