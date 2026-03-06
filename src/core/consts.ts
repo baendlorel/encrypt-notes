@@ -31,7 +31,7 @@ export const enum ContextKey {
 }
 
 export namespace Configs {
-  export const DefaultFileExtensions = ['txt', 'md'];
+  export const DefaultFileExtensions = ['.txt', '.md'];
   export const DefaultActionButtonLocation: ActionButtonLocation = ActionButtonLocation.FirstLine;
   export const enum ActionButtonLocation {
     FirstLine,

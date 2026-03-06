@@ -415,7 +415,14 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   vsc.showInfo(t('info.permanentDecrypt.saved'));
 };
 
-const runCommandForDocument = async (document: vscode.TextDocument, mode: 'encrypt' | 'decrypt'): Promise<void> => {
+const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> => {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vsc.showError(t('error.noActiveEditor'));
+    return;
+  }
+
+  const document = editor.document;
   if (document.uri.scheme !== 'file' && !ve.isVirtual(document)) {
     vsc.showError(t('error.onlyLocalFile'));
     return;
@@ -436,24 +443,6 @@ const runCommandForDocument = async (document: vscode.TextDocument, mode: 'encry
     await updateEditorContext();
     return;
   }
-
-  // if (isEncryptedText(document.getText())) {
-  //   await decryptCurrentDocument(document);
-  // } else {
-  //   await encryptCurrentDocument(document);
-  // }
-
-  // await updateEditorContext();
-};
-
-const runCommandForActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> => {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    vsc.showError(t('error.noActiveEditor'));
-    return;
-  }
-
-  await runCommandForDocument(editor.document, mode);
 };
 
 const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
@@ -518,22 +507,17 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       new EncryptionCodeLensProvider(),
     ),
     // todo 这里为什么这么复杂？
-    vscode.commands.registerCommand('encrypted-notes.encrypt', () => runCommandForActiveDocument('encrypt')),
-    vscode.commands.registerCommand('encrypted-notes.decrypt', () => runCommandForActiveDocument('decrypt')),
+    vscode.commands.registerCommand('encrypted-notes.encrypt', () => handleActiveDocument('encrypt')),
+    vscode.commands.registerCommand('encrypted-notes.decrypt', () => handleActiveDocument('decrypt')),
     vscode.workspace.onDidOpenTextDocument(async (document) => {
       await refreshEncryptedOnDiskState(document);
-      if (document.uri.scheme === 'file') {
-        await tryAutoDecrypt(document);
-      }
+      await tryAutoDecrypt(document);
       await updateEditorContext();
     }),
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       if (editor) {
         await refreshEncryptedOnDiskState(editor.document);
-
-        if (editor.document.uri.scheme === 'file') {
-          await tryAutoDecrypt(editor.document);
-        }
+        await tryAutoDecrypt(editor.document);
       }
 
       await updateEditorContext();
@@ -591,7 +575,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       void updateEditorContext();
 
       const activeDocument = vscode.window.activeTextEditor?.document;
-      if (activeDocument && activeDocument.uri.scheme === 'file') {
+      if (activeDocument) {
         void tryAutoDecrypt(activeDocument);
       }
     }),
@@ -604,7 +588,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
   await updateEditorContext();
 
-  if (activeDocument && activeDocument.uri.scheme === 'file') {
+  if (activeDocument) {
     await tryAutoDecrypt(activeDocument);
   }
 };
