@@ -17,6 +17,7 @@ export namespace Consts {
    * Virtual document scheme used for decrypted content.
    */
   export const UTF8_BOM = '\uFEFF';
+  export const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
 }
 
 export const enum ContextKey {

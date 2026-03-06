@@ -13,7 +13,7 @@ import {
   hasOpenTabForSource,
   isVirtualDocument,
   toVirtualUri,
-} from './core/virtual-edit.js';
+} from './virtual-edit/virtual-edit.js';
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
 
@@ -23,9 +23,6 @@ const skippedAutoDecrypt = new Set<string>();
 const decryptPromptInProgress = new Set<string>();
 const encryptedOnDiskState = new Map<string, boolean>();
 const codeLensChangeEmitter = new vscode.EventEmitter<void>();
-
-const getCodeLensEncryptTitle = (): string => t('codelens.encrypt');
-const getCodeLensDecryptTitle = (): string => t('codelens.decrypt');
 
 const getCodeLensAnchorRange = (document: vscode.TextDocument): vscode.Range => {
   const line = Math.max(0, Math.min(document.lineCount - 1, 0));

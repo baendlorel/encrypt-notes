@@ -1,10 +1,9 @@
 import vscode from 'vscode';
-import type { DecryptTextFn, EncryptTextFn, IsEncryptedTextFn } from './types.js';
+import type { DecryptTextFn, EncryptTextFn, IsEncryptedTextFn } from '@/core/types.js';
+import { Consts } from '@/core/consts.js';
 
-import { t } from '../i18n/index.js';
+import { t } from '@/i18n/index.js';
 import { ve } from '@/virtual-edit/methods.js';
-
-const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
 
 const hasUtf8Bom = (content: Uint8Array): boolean =>
   content.length >= 3 && content[0] === 0xef && content[1] === 0xbb && content[2] === 0xbf;
@@ -210,7 +209,7 @@ export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProv
       try {
         const sourceRaw = await vscode.workspace.fs.readFile(sourceUri);
         if (hasUtf8Bom(sourceRaw)) {
-          nextRaw = Buffer.concat([UTF8_BOM_BUFFER, encryptedRaw]);
+          nextRaw = Buffer.concat([Consts.UTF8_BOM_BUFFER, encryptedRaw]);
         }
       } catch {}
     }
