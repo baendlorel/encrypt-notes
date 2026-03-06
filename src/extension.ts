@@ -219,6 +219,14 @@ const showDecryptError = (error: unknown): void => {
   vsc.showError(t('error.decrypt.failed'));
 };
 
+const clearSessionState = (sourceKey: string): void => {
+  passwordCache.delete(sourceKey);
+  decryptedSession.delete(sourceKey);
+  skippedAutoDecrypt.delete(sourceKey);
+  decryptPromptInProgress.delete(sourceKey);
+  encryptedOnDiskState.delete(sourceKey);
+};
+
 const openVirtualEditor = async (
   sourceDocument: vscode.TextDocument,
   password: string,
@@ -521,6 +529,28 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
       await updateEditorContext();
     }),
+    vscode.window.tabGroups.onDidChangeTabs((event) => {
+      for (const closedTab of event.closed) {
+        if (!(closedTab.input instanceof vscode.TabInputText)) {
+          continue;
+        }
+
+        if (!ve.isVirtualUri(closedTab.input.uri)) {
+          continue;
+        }
+
+        const sourceUri = ve.getSourceUri(closedTab.input.uri);
+        const sourceKey = ve.getUriKey(sourceUri);
+
+        if (ve.hasOpenVirtualTabForSource(sourceUri)) {
+          continue;
+        }
+
+        clearSessionState(sourceKey);
+      }
+
+      updateEditorContext();
+    }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       if (vscode.window.activeTextEditor?.document.uri.toString() === event.document.uri.toString()) {
         updateEditorContext();
@@ -545,21 +575,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       const sourceKey = ve.getUriKey(sourceUri);
 
       if (ve.isVirtual(document)) {
-        passwordCache.delete(sourceKey);
-        decryptedSession.delete(sourceKey);
-        skippedAutoDecrypt.delete(sourceKey);
-        decryptPromptInProgress.delete(sourceKey);
-        encryptedOnDiskState.delete(sourceKey);
+        clearSessionState(sourceKey);
         updateEditorContext();
         return;
       }
 
       if (!ve.hasOpenTabForSource(sourceUri)) {
-        passwordCache.delete(sourceKey);
-        decryptedSession.delete(sourceKey);
-        skippedAutoDecrypt.delete(sourceKey);
-        decryptPromptInProgress.delete(sourceKey);
-        encryptedOnDiskState.delete(sourceKey);
+        clearSessionState(sourceKey);
         updateEditorContext();
         return;
       }
