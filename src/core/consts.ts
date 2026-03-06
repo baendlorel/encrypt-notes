@@ -1,4 +1,4 @@
-import { ActionButtonLocationRaw } from '../lib/types.js';
+import { ButtonLocationRaw } from '../lib/types.js';
 
 export namespace AesConfig {
   export const Algorithm = 'aes-256-gcm';
@@ -32,20 +32,20 @@ export const enum ContextKey {
 
 export namespace Configs {
   export const DefaultFileExtensions = ['.txt', '.md'];
-  export const DefaultActionButtonLocation: ActionButtonLocation = ActionButtonLocation.FirstLine;
-  export const enum ActionButtonLocation {
+  export const DefaultButtonLocation: ButtonLocation = ButtonLocation.FirstLine;
+  export const enum ButtonLocation {
     FirstLine,
     EditorTitle,
   }
 
-  const actionButtonLocationMap: Record<ActionButtonLocationRaw, ActionButtonLocation> = {
-    'Fisrt Line': ActionButtonLocation.FirstLine,
-    首行: ActionButtonLocation.FirstLine,
-    'Editor Title': ActionButtonLocation.EditorTitle,
-    编辑器右上角: ActionButtonLocation.EditorTitle,
+  const buttonLocationMap: Record<ButtonLocationRaw, ButtonLocation> = {
+    'Fisrt Line': ButtonLocation.FirstLine,
+    首行: ButtonLocation.FirstLine,
+    'Editor Title': ButtonLocation.EditorTitle,
+    编辑器右上角: ButtonLocation.EditorTitle,
   };
-  export const justifyActionButtonLocation = (value: string = ''): ActionButtonLocation =>
-    actionButtonLocationMap[value as ActionButtonLocationRaw] ?? ActionButtonLocation.FirstLine;
+  export const justifyButtonLocation = (value: string = ''): ButtonLocation =>
+    buttonLocationMap[value as ButtonLocationRaw] ?? ButtonLocation.FirstLine;
 }
 
 export namespace Commands {

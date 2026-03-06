@@ -6,7 +6,7 @@ class EncryptNotesConfiguration {
   private config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration(Consts.ExtensionId);
 
   private fileExtensions: Set<string> = new Set();
-  private actionButtonLocation: Configs.ActionButtonLocation = Configs.DefaultActionButtonLocation;
+  private buttonLocation: Configs.ButtonLocation = Configs.DefaultButtonLocation;
 
   update() {
     this.config = vscode.workspace.getConfiguration(Consts.ExtensionId);
@@ -20,7 +20,7 @@ class EncryptNotesConfiguration {
     );
 
     const rawActionButtonLocation = this.config.get<string>('actionButtonLocation');
-    this.actionButtonLocation = Configs.justifyActionButtonLocation(rawActionButtonLocation);
+    this.buttonLocation = Configs.justifyButtonLocation(rawActionButtonLocation);
   }
 
   /**
@@ -41,11 +41,11 @@ class EncryptNotesConfiguration {
   }
 
   get buttonOnFirstLine(): boolean {
-    return this.actionButtonLocation === Configs.ActionButtonLocation.FirstLine;
+    return this.buttonLocation === Configs.ButtonLocation.FirstLine;
   }
 
   get buttonOnEditorTitle(): boolean {
-    return this.actionButtonLocation === Configs.ActionButtonLocation.EditorTitle;
+    return this.buttonLocation === Configs.ButtonLocation.EditorTitle;
   }
 }
 

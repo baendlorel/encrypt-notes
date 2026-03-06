@@ -13,4 +13,4 @@ export interface ParsedEncryptedFile {
   readonly ciphertext: Buffer;
 }
 
-export type ActionButtonLocationRaw = 'Fisrt Line' | 'Editor Title' | '首行' | '编辑器右上角';
+export type ButtonLocationRaw = 'Fisrt Line' | 'Editor Title' | '首行' | '编辑器右上角';
