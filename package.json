@@ -82,7 +82,7 @@
         },
         {
           "command": "encrypted-notes.permanentDecryptCurrent",
-          "group": "navigation@1",
+          "group": "navigation@0",
           "when": "encryptedNotes.showTitleActions && encryptedNotes.canDecryptDocument"
         }
       ]
@@ -116,8 +116,8 @@
           "type": "string",
           "default": "firstLine",
           "enum": [
-            "firstLine",
-            "editorTitle"
+            "%configuration.actionButtonLocation.firstLine.value%",
+            "%configuration.actionButtonLocation.editorTitle.value%"
           ],
           "enumDescriptions": [
             "%configuration.actionButtonLocation.firstLine%",

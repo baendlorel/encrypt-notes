@@ -10,5 +10,7 @@
   "configuration.restorePlainTextAfterSave.description": "保存后是否在编辑器中恢复明文。关闭后可避免因恢复明文而长期显示未保存标记。",
   "configuration.actionButtonLocation.description": "选择加密/解密按钮显示位置。",
   "configuration.actionButtonLocation.firstLine": "显示在首行（CodeLens）",
-  "configuration.actionButtonLocation.editorTitle": "显示在编辑器右上角（SVG 图标）"
+  "configuration.actionButtonLocation.editorTitle": "显示在编辑器右上角（SVG 图标）",
+  "configuration.actionButtonLocation.firstLine.value": "首行",
+  "configuration.actionButtonLocation.editorTitle.value": "编辑器右上角"
 }

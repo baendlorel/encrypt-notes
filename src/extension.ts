@@ -505,6 +505,11 @@ const runCommandForDocument = async (
   }
 
   if (mode === 'permanentDecrypt') {
+    const confirmed = await confirmPermanentDecrypt();
+    if (!confirmed) {
+      return;
+    }
+
     await permanentlyDecryptCurrentDocument(document);
     await updateEditorContext();
     return;
@@ -582,11 +587,6 @@ const runCodeLensDecryptCommand = async (targetUri: vscode.Uri | undefined): Pro
   const document = targetUri ? await resolveOpenDocumentByUri(targetUri) : vscode.window.activeTextEditor?.document;
   if (!document) {
     showError(t('error.noActiveEditor'));
-    return;
-  }
-
-  const confirmed = await confirmPermanentDecrypt();
-  if (!confirmed) {
     return;
   }
 

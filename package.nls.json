@@ -10,5 +10,7 @@
   "configuration.restorePlainTextAfterSave.description": "Keep plaintext in editor after save. Disable this to avoid the always-dirty indicator caused by plaintext restore.",
   "configuration.actionButtonLocation.description": "Choose where to show encrypt/decrypt action buttons.",
   "configuration.actionButtonLocation.firstLine": "Show on first line (CodeLens)",
-  "configuration.actionButtonLocation.editorTitle": "Show in editor top-right (SVG icons)"
+  "configuration.actionButtonLocation.editorTitle": "Show in editor top-right (SVG icons)",
+  "configuration.actionButtonLocation.firstLine.value": "Fisrt Line",
+  "configuration.actionButtonLocation.editorTitle.value": "Editor Title"
 }
