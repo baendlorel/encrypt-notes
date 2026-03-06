@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { t } from '../i18n/index.js';
 import { VIRTUAL_DOCUMENT_SCHEME } from '../lib/consts.js';
 
 type DecryptTextFn = (content: string, password: string) => string;
@@ -26,11 +27,6 @@ const getRequiredSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri => {
 
 export const getUriKey = (uri: vscode.Uri): string => uri.toString();
 
-export const getDecryptedDisplayPrefix = (): string => {
-  const language = vscode.env.language.toLowerCase();
-  return language.startsWith('zh') ? '[明文]' : '[Decrypted]';
-};
-
 export const getVirtualDisplayPath = (sourceUri: vscode.Uri): string => {
   const sourcePath = sourceUri.path;
   const lastSlash = sourcePath.lastIndexOf('/');
@@ -41,7 +37,7 @@ export const getVirtualDisplayPath = (sourceUri: vscode.Uri): string => {
     return sourcePath;
   }
 
-  return `${directoryPath}${getDecryptedDisplayPrefix()}${filename}`;
+  return `${directoryPath}${t('virtual.displayPrefixDecrypted')}${filename}`;
 };
 
 export const parseSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri | undefined => {
@@ -175,7 +171,7 @@ export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProv
 
     const password = this.passwordCache.get(sourceKey);
     if (!password) {
-      throw vscode.FileSystemError.NoPermissions('缺少密码，请先重新解密文件。');
+      throw vscode.FileSystemError.NoPermissions(t('virtual.error.readMissingPassword'));
     }
 
     try {
@@ -183,7 +179,7 @@ export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProv
       return Buffer.from(plainText, 'utf8');
     } catch {
       this.passwordCache.delete(sourceKey);
-      throw vscode.FileSystemError.NoPermissions('密码错误，请关闭后重新打开文件。');
+      throw vscode.FileSystemError.NoPermissions(t('virtual.error.readInvalidPassword'));
     }
   }
 
@@ -200,7 +196,7 @@ export class EncryptedVirtualFileSystemProvider implements vscode.FileSystemProv
     const password = this.passwordCache.get(sourceKey);
 
     if (!password) {
-      throw vscode.FileSystemError.NoPermissions('缺少密码，无法保存。');
+      throw vscode.FileSystemError.NoPermissions(t('virtual.error.writeMissingPassword'));
     }
 
     let sourceExists = true;

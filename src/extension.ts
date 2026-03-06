@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { getExtensionConfig, isSupportedByUriExtensionList } from './lib/config.js';
 import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
+import { t } from './i18n/index.js';
 import {
   closeTabsForUri,
   EncryptedVirtualFileSystemProvider,
@@ -31,12 +32,8 @@ const codeLensChangeEmitter = new vscode.EventEmitter<void>();
 const CODELENS_ENCRYPT_COMMAND = 'encrypted-notes.codelensEncryptCurrent';
 const CODELENS_DECRYPT_COMMAND = 'encrypted-notes.codelensDecryptCurrent';
 
-const isChineseLanguage = (): boolean => vscode.env.language.toLowerCase().startsWith('zh');
-
-// const getCodeLensEncryptTitle = (): string => (isChineseLanguage() ? '$(lock)  加密' : '$(lock)  Encrypt');
-// const getCodeLensDecryptTitle = (): string => (isChineseLanguage() ? '$(unlock)  解密' : '$(unlock)  Decrypt');
-const getCodeLensEncryptTitle = (): string => (isChineseLanguage() ? '加密' : 'Encrypt');
-const getCodeLensDecryptTitle = (): string => (isChineseLanguage() ? '解密' : 'Decrypt');
+const getCodeLensEncryptTitle = (): string => t('codelens.encrypt');
+const getCodeLensDecryptTitle = (): string => t('codelens.decrypt');
 
 const getCodeLensAnchorRange = (document: vscode.TextDocument): vscode.Range => {
   const line = Math.max(0, Math.min(document.lineCount - 1, 0));
@@ -60,28 +57,20 @@ const showInfo = (message: string): void => {
 };
 
 const confirmPermanentDecrypt = async (): Promise<boolean> => {
-  const message = isChineseLanguage() ? '确认解密' : 'Confirm Decrypt';
-  const placeholder = isChineseLanguage()
-    ? '解密后将变为普通文件，以后不需要输入密码访问。'
-    : 'Decrypting will convert this into a normal file. Password is no longer required.';
-
-  const continueLabel = isChineseLanguage() ? '继续' : 'Continue';
-  const cancelLabel = isChineseLanguage() ? '取消' : 'Cancel';
-
   const selected = await vscode.window.showQuickPick(
     [
       {
-        label: continueLabel,
-        description: message,
+        label: t('confirm.permanentDecrypt.continue'),
+        description: t('confirm.permanentDecrypt.optionDescription'),
         value: 'continue',
       },
       {
-        label: cancelLabel,
+        label: t('confirm.permanentDecrypt.cancel'),
         value: 'cancel',
       },
     ],
     {
-      title: placeholder,
+      title: t('confirm.permanentDecrypt.title'),
       ignoreFocusOut: true,
     },
   );
@@ -199,7 +188,7 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
     prompt,
     password: true,
     ignoreFocusOut: true,
-    validateInput: (value) => (value.length === 0 ? '密码不能为空。' : undefined),
+    validateInput: (value) => (value.length === 0 ? t('prompt.passwordRequired') : undefined),
   });
 
   if (password === undefined || password.length === 0) {
@@ -243,16 +232,16 @@ const updateEditorContext = async (): Promise<void> => {
 
 const showDecryptError = (error: unknown): void => {
   if (error instanceof InvalidPasswordError) {
-    showError('密码错误，解密失败。');
+    showError(t('error.decrypt.invalidPassword'));
     return;
   }
 
   if (error instanceof InvalidEncryptedFileError) {
-    showError(`文件格式损坏或不受支持：${error.message}`);
+    showError(t('error.decrypt.invalidFile', error.message));
     return;
   }
 
-  showError('解密失败。');
+  showError(t('error.decrypt.failed'));
 };
 
 const openVirtualEditor = async (
@@ -264,7 +253,7 @@ const openVirtualEditor = async (
   const sourceKey = getUriKey(sourceUri);
 
   if (sourceUri.scheme !== 'file') {
-    showError('仅支持本地文件。');
+    showError(t('error.onlyLocalFile'));
     return false;
   }
 
@@ -288,12 +277,12 @@ const openVirtualEditor = async (
     await closeTabsForUri(sourceUri);
 
     if (showSuccessMessage) {
-      showInfo('解密成功，当前为解密编辑视图，保存时会自动加密写入磁盘。');
+      showInfo(t('info.decrypt.openVirtualSuccess'));
     }
 
     return true;
   } catch {
-    showError('无法打开解密编辑视图。');
+    showError(t('error.decrypt.openVirtualFailed'));
     return false;
   }
 };
@@ -312,7 +301,7 @@ const tryDecryptDocument = async (document: vscode.TextDocument, showSuccessMess
 
   passwordCache.delete(sourceKey);
 
-  const password = await promptPassword('请输入解密密码');
+  const password = await promptPassword(t('prompt.decryptPassword'));
   if (!password) {
     return false;
   }
@@ -324,9 +313,9 @@ const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
   if (isVirtualDocument(document)) {
     const saved = await document.save();
     if (saved) {
-      showInfo('当前为解密编辑视图，内容已按加密格式写入磁盘。');
+      showInfo(t('info.encrypt.savedFromVirtual'));
     } else {
-      showError('自动保存失败，请重试。');
+      showError(t('error.save.retry'));
     }
 
     return;
@@ -336,18 +325,18 @@ const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
   const sourceKey = getUriKey(sourceUri);
 
   if (!isSupportedByUriExtensionList(sourceUri)) {
-    showError('当前文件不在可加密的扩展名列表内。');
+    showError(t('error.encrypt.unsupportedExtension'));
     return;
   }
 
   if (isEncryptedText(document.getText())) {
-    showInfo('当前文件已经是加密状态。');
+    showInfo(t('info.encrypt.alreadyEncrypted'));
     return;
   }
 
   let password = passwordCache.get(sourceKey);
   if (!password) {
-    password = await promptPassword('请输入加密密码');
+    password = await promptPassword(t('prompt.encryptPassword'));
     if (!password) {
       return;
     }
@@ -358,13 +347,13 @@ const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
   const applied = await replaceDocumentText(document, encryptedContent);
 
   if (!applied) {
-    showError('无法将加密结果写入当前文档。');
+    showError(t('error.encrypt.applyFailed'));
     return;
   }
 
   const saved = await document.save();
   if (!saved) {
-    showError('文件加密成功，但自动保存失败，请手动保存。');
+    showError(t('error.encrypt.saveFailed'));
     return;
   }
 
@@ -376,18 +365,18 @@ const encryptCurrentDocument = async (document: vscode.TextDocument): Promise<vo
   const encryptedDocument = await vscode.workspace.openTextDocument(sourceUri);
   const opened = await openVirtualEditor(encryptedDocument, password, false);
   if (opened) {
-    showInfo('已加密并保存，当前以解密视图继续编辑。');
+    showInfo(t('info.encrypt.savedAndContinueDecrypted'));
   }
 };
 
 const decryptCurrentDocument = async (document: vscode.TextDocument): Promise<void> => {
   if (isVirtualDocument(document)) {
-    showInfo('当前已经是解密编辑视图，保存时会自动加密写入磁盘。');
+    showInfo(t('info.decrypt.alreadyVirtual'));
     return;
   }
 
   if (!isEncryptedText(document.getText())) {
-    showInfo('当前文件不是加密格式。');
+    showInfo(t('info.decrypt.notEncrypted'));
     return;
   }
 
@@ -404,7 +393,7 @@ const permanentlyDecryptCurrentDocument = async (document: vscode.TextDocument):
     try {
       await vscode.workspace.fs.writeFile(sourceUri, Buffer.from(plainText, 'utf8'));
     } catch {
-      showError('无法将明文写回原文件。');
+      showError(t('error.permanentDecrypt.writePlainFailed'));
       return;
     }
 
@@ -421,17 +410,17 @@ const permanentlyDecryptCurrentDocument = async (document: vscode.TextDocument):
     });
     await closeTabsForUri(document.uri);
 
-    showInfo('已永久解密并保存，后续保存不会自动加密。');
+    showInfo(t('info.permanentDecrypt.saved'));
     return;
   }
 
   if (!isEncryptedText(document.getText())) {
-    showInfo('当前文件不在自动加密会话中，无需永久解密。');
+    showInfo(t('info.permanentDecrypt.notNeeded'));
     return;
   }
 
   const cachedPassword = passwordCache.get(sourceKey);
-  const password = cachedPassword ?? (await promptPassword('请输入解密密码'));
+  const password = cachedPassword ?? (await promptPassword(t('prompt.decryptPassword')));
   if (!password) {
     return;
   }
@@ -446,13 +435,13 @@ const permanentlyDecryptCurrentDocument = async (document: vscode.TextDocument):
 
   const applied = await replaceDocumentText(document, plainText);
   if (!applied) {
-    showError('无法将解密结果写入当前文档。');
+    showError(t('error.permanentDecrypt.applyFailed'));
     return;
   }
 
   const saved = await document.save();
   if (!saved) {
-    showError('文件已解密，但自动保存失败，请手动保存。');
+    showError(t('error.permanentDecrypt.saveFailed'));
     return;
   }
 
@@ -462,7 +451,7 @@ const permanentlyDecryptCurrentDocument = async (document: vscode.TextDocument):
   decryptPromptInProgress.delete(sourceKey);
   encryptedOnDiskState.set(sourceKey, false);
 
-  showInfo('已永久解密并保存，后续保存不会自动加密。');
+  showInfo(t('info.permanentDecrypt.saved'));
 };
 
 const resolveOpenDocumentByUri = async (uri: vscode.Uri): Promise<vscode.TextDocument> => {
@@ -480,12 +469,12 @@ const runCommandForDocument = async (
   mode: 'encrypt' | 'decrypt' | 'toggle' | 'permanentDecrypt',
 ): Promise<void> => {
   if (document.uri.scheme !== 'file' && !isVirtualDocument(document)) {
-    showError('仅支持本地文件。');
+    showError(t('error.onlyLocalFile'));
     return;
   }
 
   if (!isExtensionEnabled()) {
-    showError('扩展当前处于禁用状态，请先开启 encrypted-notes.enabled。');
+    showError(t('error.extension.disabled'));
     return;
   }
 
@@ -521,7 +510,7 @@ const runCommandForActiveDocument = async (
 ): Promise<void> => {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
-    showError('没有可操作的活动编辑器。');
+    showError(t('error.noActiveEditor'));
     return;
   }
 
@@ -568,7 +557,7 @@ const tryAutoDecrypt = async (document: vscode.TextDocument): Promise<void> => {
 const runCodeLensEncryptCommand = async (targetUri: vscode.Uri | undefined): Promise<void> => {
   const document = targetUri ? await resolveOpenDocumentByUri(targetUri) : vscode.window.activeTextEditor?.document;
   if (!document) {
-    showError('没有可操作的活动编辑器。');
+    showError(t('error.noActiveEditor'));
     return;
   }
 
@@ -578,7 +567,7 @@ const runCodeLensEncryptCommand = async (targetUri: vscode.Uri | undefined): Pro
 const runCodeLensDecryptCommand = async (targetUri: vscode.Uri | undefined): Promise<void> => {
   const document = targetUri ? await resolveOpenDocumentByUri(targetUri) : vscode.window.activeTextEditor?.document;
   if (!document) {
-    showError('没有可操作的活动编辑器。');
+    showError(t('error.noActiveEditor'));
     return;
   }
 
@@ -666,7 +655,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         if (document.uri.scheme === VIRTUAL_DOCUMENT_SCHEME) {
           encryptedOnDiskState.set(sourceKey, true);
           decryptedSession.add(sourceKey);
-          vscode.window.setStatusBarMessage('Encrypted Notes: 文件已按加密格式保存。', 1600);
+          vscode.window.setStatusBarMessage(t('status.savedEncrypted'), 1600);
         }
 
         if (vscode.window.activeTextEditor?.document.uri.toString() === document.uri.toString()) {
