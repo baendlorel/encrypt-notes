@@ -12,4 +12,7 @@ export const VIRTUAL_DOCUMENT_SCHEME = 'encrypted-notes-decrypted';
 export const CONTEXT_SUPPORTED_DOCUMENT = 'encryptedNotes.supportedDocument';
 export const CONTEXT_IS_ENCRYPTED_DOCUMENT = 'encryptedNotes.isEncryptedDocument';
 export const CONTEXT_CAN_ENCRYPT_DOCUMENT = 'encryptedNotes.canEncryptDocument';
+export const CONTEXT_CAN_DECRYPT_DOCUMENT = 'encryptedNotes.canDecryptDocument';
 export const CONTEXT_CAN_PERMANENT_DECRYPT = 'encryptedNotes.canPermanentDecrypt';
+export const CONTEXT_SHOW_CODELENS_ACTIONS = 'encryptedNotes.showCodeLensActions';
+export const CONTEXT_SHOW_TITLE_ACTIONS = 'encryptedNotes.showTitleActions';

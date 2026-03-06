@@ -16,8 +16,11 @@ import {
 } from './core/virtual-edit.js';
 import {
   CONTEXT_CAN_ENCRYPT_DOCUMENT,
+  CONTEXT_CAN_DECRYPT_DOCUMENT,
   CONTEXT_CAN_PERMANENT_DECRYPT,
   CONTEXT_IS_ENCRYPTED_DOCUMENT,
+  CONTEXT_SHOW_CODELENS_ACTIONS,
+  CONTEXT_SHOW_TITLE_ACTIONS,
   CONTEXT_SUPPORTED_DOCUMENT,
   VIRTUAL_DOCUMENT_SCHEME,
 } from './lib/consts.js';
@@ -79,6 +82,7 @@ const confirmPermanentDecrypt = async (): Promise<boolean> => {
 };
 
 const isExtensionEnabled = (): boolean => getExtensionConfig().enabled;
+const isCodeLensActionLocation = (): boolean => getExtensionConfig().actionButtonLocation === 'firstLine';
 
 const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promise<void> => {
   const sourceUri = getSourceUri(document.uri);
@@ -118,7 +122,7 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
   public readonly onDidChangeCodeLenses = codeLensChangeEmitter.event;
 
   public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-    if (!isExtensionEnabled()) {
+    if (!isExtensionEnabled() || !isCodeLensActionLocation()) {
       return [];
     }
 
@@ -206,11 +210,18 @@ const replaceDocumentText = async (document: vscode.TextDocument, nextContent: s
 
 const updateEditorContext = async (): Promise<void> => {
   const activeDocument = vscode.window.activeTextEditor?.document;
+  const config = getExtensionConfig();
+  const showCodeLensActions = config.actionButtonLocation === 'firstLine';
+  const showTitleActions = config.actionButtonLocation === 'editorTitle';
+
+  await vscode.commands.executeCommand('setContext', CONTEXT_SHOW_CODELENS_ACTIONS, showCodeLensActions);
+  await vscode.commands.executeCommand('setContext', CONTEXT_SHOW_TITLE_ACTIONS, showTitleActions);
 
   if (!activeDocument || !isExtensionEnabled()) {
     await vscode.commands.executeCommand('setContext', CONTEXT_SUPPORTED_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_CAN_ENCRYPT_DOCUMENT, false);
+    await vscode.commands.executeCommand('setContext', CONTEXT_CAN_DECRYPT_DOCUMENT, false);
     await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, false);
     triggerCodeLensRefresh();
     return;
@@ -220,12 +231,15 @@ const updateEditorContext = async (): Promise<void> => {
   const supported = isSupportedDocument(activeDocument);
   const encryptedOnDisk = getEncryptedOnDiskState(activeDocument);
   const encryptedInEditor = isEncryptedText(activeDocument.getText());
+  const isSourceFile = activeDocument.uri.scheme === 'file';
   const canEncrypt = supported && !encryptedOnDisk;
+  const canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || isVirtualDocument(activeDocument));
   const canPermanentDecrypt = supported && encryptedOnDisk && decryptedSession.has(sourceKey);
 
   await vscode.commands.executeCommand('setContext', CONTEXT_SUPPORTED_DOCUMENT, supported);
   await vscode.commands.executeCommand('setContext', CONTEXT_IS_ENCRYPTED_DOCUMENT, encryptedInEditor);
   await vscode.commands.executeCommand('setContext', CONTEXT_CAN_ENCRYPT_DOCUMENT, canEncrypt);
+  await vscode.commands.executeCommand('setContext', CONTEXT_CAN_DECRYPT_DOCUMENT, canDecrypt);
   await vscode.commands.executeCommand('setContext', CONTEXT_CAN_PERMANENT_DECRYPT, canPermanentDecrypt);
   triggerCodeLensRefresh();
 };

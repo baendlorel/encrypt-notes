@@ -68,8 +68,8 @@
         "title": "%command.permanentDecryptCurrent.title%",
         "category": "%extension.category%",
         "icon": {
-          "light": "assets/permanent-unlock-light.svg",
-          "dark": "assets/permanent-unlock-dark.svg"
+          "light": "assets/unlock-light.svg",
+          "dark": "assets/unlock-dark.svg"
         }
       }
     ],
@@ -78,17 +78,12 @@
         {
           "command": "encrypted-notes.encryptCurrent",
           "group": "navigation@0",
-          "when": "encryptedNotes.canEncryptDocument"
-        },
-        {
-          "command": "encrypted-notes.decryptCurrent",
-          "group": "navigation@0",
-          "when": "encryptedNotes.supportedDocument && encryptedNotes.isEncryptedDocument"
+          "when": "encryptedNotes.showTitleActions && encryptedNotes.canEncryptDocument"
         },
         {
           "command": "encrypted-notes.permanentDecryptCurrent",
           "group": "navigation@1",
-          "when": "!encryptedNotes.isEncryptedDocument && encryptedNotes.canPermanentDecrypt"
+          "when": "encryptedNotes.showTitleActions && encryptedNotes.canDecryptDocument"
         }
       ]
     },
@@ -116,6 +111,19 @@
           "type": "boolean",
           "default": true,
           "description": "%configuration.restorePlainTextAfterSave.description%"
+        },
+        "encrypted-notes.actionButtonLocation": {
+          "type": "string",
+          "default": "firstLine",
+          "enum": [
+            "firstLine",
+            "editorTitle"
+          ],
+          "enumDescriptions": [
+            "%configuration.actionButtonLocation.firstLine%",
+            "%configuration.actionButtonLocation.editorTitle%"
+          ],
+          "description": "%configuration.actionButtonLocation.description%"
         }
       }
     }
