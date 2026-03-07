@@ -188,33 +188,24 @@ const replaceDocumentText = async (document: vscode.TextDocument, nextContent: s
 const updateEditorContext = async (): Promise<void> => {
   const activeDocument = vscode.window.activeTextEditor?.document;
 
-  await vsc.setContext(ContextKey.ShowCodeLensActions, configs.buttonOnFirstLine);
-  await vsc.setContext(ContextKey.ShowTitleActions, configs.buttonOnEditorTitle);
+  await vsc.setContext('showCodeLensActions', configs.buttonOnFirstLine);
+  await vsc.setContext('showTitleActions', configs.buttonOnEditorTitle);
 
   if (!activeDocument) {
-    await vsc.setContext(ContextKey.SupportedDocument, false);
-    await vsc.setContext(ContextKey.IsEncryptedDocument, false);
-    await vsc.setContext(ContextKey.CanEncryptDocument, false);
-    await vsc.setContext(ContextKey.CanDecryptDocument, false);
-    await vsc.setContext(ContextKey.CanPermanentDecrypt, false);
+    await vsc.setContext('canEncrypt', false);
+    await vsc.setContext('canDecrypt', false);
     triggerCodeLensRefresh();
     return;
   }
 
-  const sourceKey = ve.getSourceUriKey(activeDocument.uri);
   const supported = isSupportedDocument(activeDocument);
   const encryptedOnDisk = getEncryptedOnDiskState(activeDocument); // todo 疑似和上面的supported重复判定
-  const encryptedInEditor = isEncryptedText(activeDocument.getText());
   const isSourceFile = activeDocument.uri.scheme === 'file';
   const canEncrypt = supported && !encryptedOnDisk;
   const canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || ve.isVirtual(activeDocument));
-  const canPermanentDecrypt = supported && encryptedOnDisk && decryptedSession.has(sourceKey);
 
-  await vsc.setContext(ContextKey.SupportedDocument, supported);
-  await vsc.setContext(ContextKey.IsEncryptedDocument, encryptedInEditor);
-  await vsc.setContext(ContextKey.CanEncryptDocument, canEncrypt);
-  await vsc.setContext(ContextKey.CanDecryptDocument, canDecrypt);
-  await vsc.setContext(ContextKey.CanPermanentDecrypt, canPermanentDecrypt);
+  await vsc.setContext('canEncrypt', canEncrypt);
+  await vsc.setContext('canDecrypt', canDecrypt);
   triggerCodeLensRefresh();
 };
 

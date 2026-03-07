@@ -20,15 +20,7 @@ export namespace Consts {
   export const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
 }
 
-export const enum ContextKey {
-  SupportedDocument = 'encryptedNotes.supportedDocument',
-  IsEncryptedDocument = 'encryptedNotes.isEncryptedDocument',
-  CanEncryptDocument = 'encryptedNotes.canEncryptDocument',
-  CanDecryptDocument = 'encryptedNotes.canDecryptDocument',
-  CanPermanentDecrypt = 'encryptedNotes.canPermanentDecrypt',
-  ShowCodeLensActions = 'encryptedNotes.showCodeLensActions',
-  ShowTitleActions = 'encryptedNotes.showTitleActions',
-}
+export type ContextKey = 'canEncrypt' | 'canDecrypt' | 'showCodeLensActions' | 'showTitleActions';
 
 export namespace Configs {
   export const DefaultFileExtensions = ['.txt', '.md'];

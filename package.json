@@ -62,12 +62,12 @@
         {
           "command": "encrypted-notes.encrypt",
           "group": "navigation@0",
-          "when": "encryptedNotes.showTitleActions && encryptedNotes.canEncryptDocument"
+          "when": "encryptedNotes.showTitleActions && encryptedNotes.canEncrypt"
         },
         {
           "command": "encrypted-notes.decrypt",
           "group": "navigation@0",
-          "when": "encryptedNotes.showTitleActions && encryptedNotes.canDecryptDocument"
+          "when": "encryptedNotes.showTitleActions && encryptedNotes.canDecrypt"
         }
       ]
     },

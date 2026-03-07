@@ -3,7 +3,8 @@ import vscode from 'vscode';
 import { ContextKey } from './consts.js';
 
 export namespace vsc {
-  export const setContext = (key: ContextKey, value: any) => vscode.commands.executeCommand('setContext', key, value);
+  export const setContext = (key: ContextKey, value: any) =>
+    vscode.commands.executeCommand('setContext', 'encryptedNotes.' + key, value);
 
   export const showError = (message: string) => vscode.window.showErrorMessage(message);
 
