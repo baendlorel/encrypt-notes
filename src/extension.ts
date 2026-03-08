@@ -34,7 +34,7 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
     // todo 如果文件在外部变化，可能这里也要侦听
     const encryptedOnDisk = getEncryptedOnDiskState(document); // refactor 这里读取文件加上
     const canEncrypt = isSourceFile && !encryptedOnDisk;
-    const canDecrypt = (isSourceFile && encryptedOnDisk) || Note.isVirtualUri(document.uri);
+    const canDecrypt = (isSourceFile && encryptedOnDisk) || Note.isVirtual(document);
 
     if (!canEncrypt && !canDecrypt) {
       return [];
@@ -67,14 +67,6 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
   }
 }
 
-const isSupportedDocument = (document: vscode.TextDocument): boolean => {
-  const sourceUri = ve.getSourceUri(document.uri);
-  if (sourceUri.scheme !== 'file') {
-    return false;
-  }
-  return configs.supports(document.uri);
-};
-
 const promptPassword = async (prompt: string): Promise<string | undefined> => {
   const password = await vscode.window.showInputBox({
     prompt,
@@ -90,8 +82,8 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
   return password;
 };
 
-const confirmPermanentDecryptByPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
-  const password = await promptPassword(t('prompt.permanentDecryptConfirmPassword'));
+const confirmDecrypt = async (document: vscode.TextDocument): Promise<string | undefined> => {
+  const password = await promptPassword(t('prompt.confirmDecrypt'));
   if (!password) {
     return undefined;
   }
@@ -105,7 +97,7 @@ const confirmPermanentDecryptByPassword = async (document: vscode.TextDocument):
   }
 
   let encryptedContent: string;
-  if (ve.isVirtual(document)) {
+  if (Note.isVirtual(document)) {
     try {
       const sourceRaw = await vscode.workspace.fs.readFile(sourceUri);
       encryptedContent = Buffer.from(sourceRaw).toString('utf8');
@@ -118,15 +110,15 @@ const confirmPermanentDecryptByPassword = async (document: vscode.TextDocument):
   }
 
   try {
-    decryptText(encryptedContent, password);
-    return password;
+    CrypNote.decrypt(encryptedContent, password);
+    return password; // ?? 这里怎么返回密码？
   } catch (error) {
     showDecryptError(error);
     return undefined;
   }
 };
 
-const replaceDocumentText = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
+const apply = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
   const edit = new vscode.WorkspaceEdit();
   const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
   edit.replace(document.uri, range, nextContent);
@@ -138,23 +130,22 @@ const updateEditorContext = async (): Promise<void> => {
 
   await vsc.setContext('buttonOnEditorTitle', configs.buttonOnEditorTitle);
 
-  if (!document) {
-    await vsc.setContext('canEncrypt', false);
-    await vsc.setContext('canDecrypt', false);
-    codeLensChangeEmitter.fire();
-    return;
-  }
+  let canEncrypt = false;
+  let canDecrypt = false;
 
-  const supported =
-    document.uri.scheme === EncrytConfig.UriScheme ||
-    (document.uri.scheme === 'file' && configs.supports(document.uri));
-  const encryptedOnDisk = CrypNote.isEncrypted(document.getText()); // todo 疑似和上面的supported重复判定
-  const isSourceFile = document.uri.scheme === 'file';
-  const canEncrypt = supported && !encryptedOnDisk;
-  const canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || ve.isVirtual(document));
+  if (document) {
+    const supported =
+      document.uri.scheme === EncrytConfig.UriScheme ||
+      (document.uri.scheme === 'file' && configs.supports(document.uri));
+    const encryptedOnDisk = CrypNote.isEncrypted(document.getText()); // refactor 也许要看一下实际的文件内容
+    const isSourceFile = document.uri.scheme === 'file';
+    canEncrypt = supported && !encryptedOnDisk;
+    canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || Note.isVirtual(document));
+  }
 
   await vsc.setContext('canEncrypt', canEncrypt);
   await vsc.setContext('canDecrypt', canDecrypt);
+
   codeLensChangeEmitter.fire();
 };
 
@@ -278,7 +269,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 
   const plainText = document.getText();
   const encryptedContent = encryptText(plainText, password);
-  const applied = await replaceDocumentText(document, encryptedContent);
+  const applied = await apply(document, encryptedContent);
 
   if (!applied) {
     vsc.showError(t('error.encrypt.applyFailed'));
@@ -353,7 +344,7 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
     return;
   }
 
-  const applied = await replaceDocumentText(document, plainText);
+  const applied = await apply(document, plainText);
   if (!applied) {
     vsc.showError(t('error.permanentDecrypt.applyFailed'));
     return;
@@ -399,7 +390,7 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
       return;
     }
 
-    const confirmedPassword = await confirmPermanentDecryptByPassword(document);
+    const confirmedPassword = await confirmDecrypt(document);
     if (!confirmedPassword) {
       return;
     }

@@ -127,5 +127,6 @@ export namespace Note {
     remove(uri);
   };
 
-  export const isVirtualUri = (uri: vscode.Uri): boolean => uri.scheme === EncrytConfig.UriScheme;
+  export const isVirtual = (document: vscode.TextDocument) => isVirtualUri(document.uri);
+  export const isVirtualUri = (uri: vscode.Uri) => uri.scheme === EncrytConfig.UriScheme;
 }

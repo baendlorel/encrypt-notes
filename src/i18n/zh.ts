@@ -7,7 +7,7 @@ export const zh = {
   'confirm.permanentDecrypt.cancel': '取消',
   'prompt.decryptPassword': '请输入解密密码',
   'prompt.encryptPassword': '请输入加密密码',
-  'prompt.permanentDecryptConfirmPassword': '请再次输入密码以确认永久解锁',
+  'prompt.confirmDecrypt': '请再次输入密码以确认永久解锁',
   'prompt.passwordRequired': '密码不能为空。',
   'error.decrypt.invalidPassword': '密码错误，解密失败。',
   'error.decrypt.invalidFile': '文件格式损坏或不受支持：{{0}}',
