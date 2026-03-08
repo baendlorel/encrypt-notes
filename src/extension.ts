@@ -16,19 +16,6 @@ const decryptPromptInProgress = new Set<string>();
 const encryptedOnDiskState = new Map<string, boolean>();
 const codeLensChangeEmitter = new vscode.EventEmitter<void>();
 
-const getCodeLensAnchorRange = (document: vscode.TextDocument): vscode.Range => {
-  const line = Math.max(0, Math.min(document.lineCount - 1, 0));
-  return new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0));
-};
-
-const triggerCodeLensRefresh = (): void => {
-  codeLensChangeEmitter.fire();
-};
-
-const getDocumentRange = (document: vscode.TextDocument): vscode.Range => {
-  return new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
-};
-
 const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promise<void> => {
   const sourceUri = ve.getSourceUri(document.uri);
   if (sourceUri.scheme !== 'file') {
@@ -85,7 +72,7 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
       return [];
     }
 
-    const range = getCodeLensAnchorRange(document);
+    const range = new vscode.Range(0, 0, 0, 0);
     const lenses: vscode.CodeLens[] = [];
 
     if (canEncrypt) {
@@ -181,7 +168,8 @@ const confirmPermanentDecryptByPassword = async (document: vscode.TextDocument):
 
 const replaceDocumentText = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
   const edit = new vscode.WorkspaceEdit();
-  edit.replace(document.uri, getDocumentRange(document), nextContent);
+  const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
+  edit.replace(document.uri, range, nextContent);
   return vscode.workspace.applyEdit(edit);
 };
 
@@ -194,7 +182,7 @@ const updateEditorContext = async (): Promise<void> => {
   if (!activeDocument) {
     await vsc.setContext('canEncrypt', false);
     await vsc.setContext('canDecrypt', false);
-    triggerCodeLensRefresh();
+    codeLensChangeEmitter.fire();
     return;
   }
 
@@ -206,7 +194,7 @@ const updateEditorContext = async (): Promise<void> => {
 
   await vsc.setContext('canEncrypt', canEncrypt);
   await vsc.setContext('canDecrypt', canDecrypt);
-  triggerCodeLensRefresh();
+  codeLensChangeEmitter.fire();
 };
 
 const showDecryptError = (error: unknown): void => {
