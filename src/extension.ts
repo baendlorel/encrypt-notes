@@ -529,7 +529,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.window.tabGroups.onDidChangeTabs(async (event) => {
       for (const { input } of event.closed) {
         if (input instanceof vscode.TabInputText) {
-          await notes.closeAll(input.uri);
+          await notes.closeRelatedTabs(input.uri);
         }
       }
       updateEditorContext();

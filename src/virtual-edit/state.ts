@@ -62,7 +62,7 @@ export namespace notes {
     return states.get(uri);
   };
 
-  export const closeAll = async (uri: vscode.Uri) => {
+  export const closeRelatedTabs = async (uri: vscode.Uri) => {
     const state = states.get(uri);
     if (!state) {
       return;
