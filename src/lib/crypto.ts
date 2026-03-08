@@ -4,113 +4,120 @@ import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
 import { EncrytConfig } from '../core/consts.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
 
-const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer =>
-  crypto.pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
+export namespace CrypNote {
+  const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer =>
+    crypto.pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
 
-const parseHeader = (rawHeader: string): EncryptedHeader => {
-  let parsed: unknown;
+  const parseHeader = (rawHeader: string): EncryptedHeader => {
+    let parsed: unknown;
 
-  try {
-    parsed = JSON.parse(rawHeader.replace(/^\uFEFF/, ''));
-  } catch {
-    throw new InvalidEncryptedFileError('Encrypted header is not valid JSON.');
-  }
+    try {
+      parsed = JSON.parse(rawHeader.replace(/^\uFEFF/, ''));
+    } catch {
+      throw new InvalidEncryptedFileError('Encrypted header is not valid JSON.');
+    }
 
-  if (!parsed || typeof parsed !== 'object') {
-    throw new InvalidEncryptedFileError('Encrypted header must be an object.');
-  }
+    if (!parsed || typeof parsed !== 'object') {
+      throw new InvalidEncryptedFileError('Encrypted header must be an object.');
+    }
 
-  const { v, alg, kdf, iter = 0, salt, iv, tag } = parsed as Partial<EncryptedHeader>;
+    const { v, alg, kdf, iter = 0, salt, iv, tag } = parsed as Partial<EncryptedHeader>;
 
-  if (v !== 1) {
-    throw new InvalidEncryptedFileError('Unsupported encrypted file version.');
-  }
+    if (v !== 1) {
+      throw new InvalidEncryptedFileError('Unsupported encrypted file version.');
+    }
 
-  if (alg !== 'AES-256-GCM') {
-    throw new InvalidEncryptedFileError('Unsupported encryption algorithm.');
-  }
+    if (alg !== 'AES-256-GCM') {
+      throw new InvalidEncryptedFileError('Unsupported encryption algorithm.');
+    }
 
-  if (kdf !== 'PBKDF2-SHA256') {
-    throw new InvalidEncryptedFileError('Unsupported key derivation function.');
-  }
+    if (kdf !== 'PBKDF2-SHA256') {
+      throw new InvalidEncryptedFileError('Unsupported key derivation function.');
+    }
 
-  if (!Number.isInteger(iter) || iter <= 0) {
-    throw new InvalidEncryptedFileError('Invalid PBKDF2 iteration count.');
-  }
+    if (!Number.isInteger(iter) || iter <= 0) {
+      throw new InvalidEncryptedFileError('Invalid PBKDF2 iteration count.');
+    }
 
-  if (typeof salt !== 'string' || typeof iv !== 'string' || typeof tag !== 'string') {
-    throw new InvalidEncryptedFileError('Encrypted header is missing required fields.');
-  }
+    if (typeof salt !== 'string' || typeof iv !== 'string' || typeof tag !== 'string') {
+      throw new InvalidEncryptedFileError('Encrypted header is missing required fields.');
+    }
 
-  return { v, alg, kdf, iter, salt, iv, tag };
-};
-
-/**
- * `Content` has 3 lines
- * 1. File flag
- * 2. JSON stringified header (metadata)
- * 3. Base64 encoded ciphertext
- */
-const parseEncryptedText = (content: string): ParsedEncryptedFile => {
-  const lines = content.split(/\r?\n/);
-
-  const headerIndex = 1;
-  const payloadIndex = 2;
-  if (lines.length <= payloadIndex) {
-    throw new InvalidEncryptedFileError('Encrypted file is incomplete.');
-  }
-
-  const header = parseHeader(lines[headerIndex]);
-  const cipherTextBase64 = lines.slice(payloadIndex).join('').trim(); // & more compatible when there is extra newlines in the end of the file
-  if (cipherTextBase64.length === 0) {
-    throw new InvalidEncryptedFileError('Encrypted payload is empty.');
-  }
-
-  return { header, ciphertext: Buffer.from(cipherTextBase64, 'base64') };
-};
-
-export const encryptText = (plainText: string, password: string): string => {
-  const salt = crypto.randomBytes(EncrytConfig.SaltLength);
-  const iv = crypto.randomBytes(EncrytConfig.IvLength);
-  const key = deriveKey(password, salt, EncrytConfig.Pbkdf2Iterations);
-
-  const cipher = crypto.createCipheriv(EncrytConfig.Algorithm, key, iv);
-  const tag = cipher.getAuthTag();
-  const header: EncryptedHeader = {
-    v: 1,
-    alg: 'AES-256-GCM',
-    kdf: 'PBKDF2-SHA256',
-    iter: EncrytConfig.Pbkdf2Iterations,
-    salt: salt.toString('base64'),
-    iv: iv.toString('base64'),
-    tag: tag.toString('base64'),
+    return { v, alg, kdf, iter, salt, iv, tag };
   };
 
-  const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]).toString('base64');
+  /**
+   * `Content` has 3 lines
+   * 1. File flag
+   * 2. JSON stringified header (metadata)
+   * 3. Base64 encoded ciphertext
+   */
+  const parseEncryptedText = (content: string): ParsedEncryptedFile => {
+    const lines = content.split(/\r?\n/);
 
-  return [EncrytConfig.FileFlag, JSON.stringify(header), ciphertext].join('\n');
-};
+    const headerIndex = 1;
+    const payloadIndex = 2;
+    if (lines.length <= payloadIndex) {
+      throw new InvalidEncryptedFileError('Encrypted file is incomplete.');
+    }
 
-// refactor 一定是确认是加密过的才会使用这个函数，不需要判定了
-export const decryptText = (content: string, password: string): string => {
-  const { header, ciphertext } = parseEncryptedText(content);
+    const header = parseHeader(lines[headerIndex]);
+    const cipherTextBase64 = lines.slice(payloadIndex).join('').trim(); // & more compatible when there is extra newlines in the end of the file
+    if (cipherTextBase64.length === 0) {
+      throw new InvalidEncryptedFileError('Encrypted payload is empty.');
+    }
 
-  const salt = Buffer.from(header.salt, 'base64');
-  const iv = Buffer.from(header.iv, 'base64');
-  const tag = Buffer.from(header.tag, 'base64');
+    return { header, ciphertext: Buffer.from(cipherTextBase64, 'base64') };
+  };
 
-  if (salt.length !== EncrytConfig.SaltLength || iv.length !== EncrytConfig.IvLength || tag.length !== 16) {
-    throw new InvalidEncryptedFileError('Encrypted metadata has invalid lengths.');
-  }
+  export const isEncrypted = (s: string): boolean =>
+    s.startsWith(EncrytConfig.Flag) || s.startsWith(EncrytConfig.FlagWithBom);
 
-  const key = deriveKey(password, salt, header.iter);
+  export const encrypt = (plainText: string, password: string): string => {
+    const salt = crypto.randomBytes(EncrytConfig.SaltLength);
+    const iv = crypto.randomBytes(EncrytConfig.IvLength);
+    const key = deriveKey(password, salt, EncrytConfig.Pbkdf2Iterations);
 
-  try {
-    const decipher = crypto.createDecipheriv(EncrytConfig.Algorithm, key, iv);
-    decipher.setAuthTag(tag);
-    const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-    return plainText.toString('utf8');
-  } catch {
-    throw new InvalidPasswordError('Password is incorrect or file is corrupted.');
-  }
-};
+    const cipher = crypto.createCipheriv(EncrytConfig.Algorithm, key, iv);
+    const tag = cipher.getAuthTag();
+    const header: EncryptedHeader = {
+      v: 1,
+      alg: 'AES-256-GCM',
+      kdf: 'PBKDF2-SHA256',
+      iter: EncrytConfig.Pbkdf2Iterations,
+      salt: salt.toString('base64'),
+      iv: iv.toString('base64'),
+      tag: tag.toString('base64'),
+    };
+
+    const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]).toString('base64');
+
+    return [EncrytConfig.Flag, JSON.stringify(header), ciphertext].join('\n');
+  };
+
+  /**
+   * ! **Must** ensure the content starts with `FileFlag` or `FileFlagWithBom` before calling this function
+   */
+  export const decrypt = (content: string, password: string): string => {
+    const { header, ciphertext } = parseEncryptedText(content);
+
+    const salt = Buffer.from(header.salt, 'base64');
+    const iv = Buffer.from(header.iv, 'base64');
+    const tag = Buffer.from(header.tag, 'base64');
+
+    if (salt.length !== EncrytConfig.SaltLength || iv.length !== EncrytConfig.IvLength || tag.length !== 16) {
+      throw new InvalidEncryptedFileError('Encrypted metadata has invalid lengths.');
+    }
+
+    const key = deriveKey(password, salt, header.iter);
+
+    try {
+      const decipher = crypto.createDecipheriv(EncrytConfig.Algorithm, key, iv);
+      decipher.setAuthTag(tag);
+      const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+      return plainText.toString('utf8');
+    } catch {
+      throw new InvalidPasswordError('Password is incorrect or file is corrupted.');
+    }
+  };
+}

@@ -9,8 +9,8 @@ export namespace EncrytConfig {
   export const Pbkdf2Iterations = 210000;
 
   // flags
-  export const FileFlag = 'ENCRYPTED_FILE';
-  export const FileFlagWithBom = '\uFEFFENCRYPTED_FILE';
+  export const Flag = 'ENCRYPTED_FILE';
+  export const FlagWithBom = '\uFEFFENCRYPTED_FILE';
   export const UriScheme = 'encrypted-notes-decrypted';
 }
 

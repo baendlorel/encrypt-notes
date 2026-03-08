@@ -2,13 +2,14 @@ import * as vscode from 'vscode';
 
 import { Commands } from './core/consts.js';
 import { configs } from './core/config.js';
-import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
-import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
 import { t } from './i18n/index.js';
+import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
+
+import { CrypNote } from './lib/crypto.js';
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
+import { Note } from './virtual-edit/state.js';
 import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
-import { notes } from './virtual-edit/state.js';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>(); // refactor 只has过一次
@@ -30,7 +31,7 @@ const getEncryptedOnDiskState = (document: vscode.TextDocument): boolean => {
     return true;
   }
 
-  return isEncryptedText(document.getText());
+  return Note.isEncrypted(document.getText());
 };
 
 class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
@@ -205,9 +206,9 @@ const openVirtualEditor = async (
   password: string,
   showSuccessMessage: boolean,
 ): Promise<boolean> => {
-  const note = notes.get(sourceDocument.uri);
+  const note = Note.get(sourceDocument.uri);
 
-  if (note?.sourceUriStr.scheme !== 'file') {
+  if (note?.sourceUri.scheme !== 'file') {
     vsc.showError(t('error.onlyLocalFile'));
     return false;
   }
@@ -226,9 +227,9 @@ const openVirtualEditor = async (
     note.encrypted = true;
 
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
-    const virtualDocument = await vscode.workspace.openTextDocument(note.virtualUriStr);
+    const virtualDocument = await vscode.workspace.openTextDocument(note.virtualUri);
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
-    await ve.closeTabsForUri(note.sourceUriStr);
+    await ve.closeTabsForUri(note.sourceUri);
 
     if (showSuccessMessage) {
       vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
@@ -497,14 +498,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('encrypted-notes.encrypt', () => handleActiveDocument('encrypt')),
     vscode.commands.registerCommand('encrypted-notes.decrypt', () => handleActiveDocument('decrypt')),
     vscode.workspace.onDidOpenTextDocument(async (document) => {
-      await notes.refresh(document);
+      await Note.refresh(document);
       await tryAutoDecrypt(document);
       await updateEditorContext();
     }),
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       // refactor 切换活动的文本编辑器的时候触发
       if (editor) {
-        await notes.refresh(editor.document);
+        await Note.refresh(editor.document);
         await tryAutoDecrypt(editor.document);
       }
 
@@ -513,7 +514,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.window.tabGroups.onDidChangeTabs(async (event) => {
       for (const { input } of event.closed) {
         if (input instanceof vscode.TabInputText) {
-          await notes.closeRelatedTabs(input.uri);
+          await Note.closeRelatedTabs(input.uri);
         }
       }
       await updateEditorContext();
@@ -525,7 +526,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     }),
     // refactor 这里可能是控制自动保存的
     vscode.workspace.onDidSaveTextDocument(async (document) => {
-      await notes.refresh(document);
+      await Note.refresh(document);
 
       const sourceKey = ve.getSourceUriKey(document.uri);
       if (ve.isVirtual(document)) {
@@ -570,7 +571,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
   const activeDocument = vscode.window.activeTextEditor?.document;
   if (activeDocument) {
-    await notes.refresh(activeDocument);
+    await Note.refresh(activeDocument);
   }
 
   await updateEditorContext();

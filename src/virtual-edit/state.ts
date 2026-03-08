@@ -1,12 +1,26 @@
 import vscode from 'vscode';
 import { EncrytConfig } from '../core/consts.js';
 import { vsc } from '../core/methods.js';
-import { ve } from './methods.js';
+import { t } from '../i18n/index.js';
+import { CrypNote } from '../lib/crypto.js';
+
+const getVirtualDisplayPath = (sourceUri: vscode.Uri): string => {
+  const sourcePath = sourceUri.path;
+  const lastSlash = sourcePath.lastIndexOf('/');
+  const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
+  const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
+
+  if (filename.length === 0) {
+    return sourcePath;
+  }
+
+  return `${directoryPath}${t('virtual.displayPrefixDecrypted')}${filename}`;
+};
 
 class NoteState {
-  sourceUriStr: string;
+  sourceUri: vscode.Uri;
 
-  virtualUriStr: string;
+  virtualUri: vscode.Uri;
 
   password: string | null = null;
 
@@ -22,8 +36,13 @@ class NoteState {
   encrypted: boolean = false;
 
   constructor(sourceUri: vscode.Uri) {
-    this.sourceUriStr = sourceUri.toString();
-    this.virtualUriStr = ve.toVirtualUri(sourceUri).toString();
+    this.sourceUri = sourceUri;
+    this.virtualUri = sourceUri.with({
+      scheme: EncrytConfig.UriScheme,
+      path: getVirtualDisplayPath(sourceUri),
+      query: encodeURIComponent(sourceUri.toString()),
+      fragment: '',
+    });
   }
 
   clear() {
@@ -38,21 +57,21 @@ class NoteState {
 /**
  * Both sourceUri and virtualUri can get the same `NoteState` object.
  */
-export namespace notes {
+export namespace Note {
   const states = new Map<string, NoteState>();
 
   export const add = (sourceUri: vscode.Uri): NoteState => {
     const o = new NoteState(sourceUri);
     states.set(sourceUri.toString(), o);
-    states.set(o.virtualUriStr.toString(), o);
+    states.set(o.virtualUri.toString(), o);
     return o;
   };
 
   export const remove = (uri: vscode.Uri) => {
     const state = states.get(uri.toString());
     if (state) {
-      states.delete(state.sourceUriStr.toString());
-      states.delete(state.virtualUriStr.toString());
+      states.delete(state.sourceUri.toString());
+      states.delete(state.virtualUri.toString());
     }
   };
 
@@ -72,21 +91,19 @@ export namespace notes {
    */
   // refactor 我觉得只要在save和open新文件的时候用一下此函数就可以了
   export const refresh = async (document: vscode.TextDocument) => {
-    // & Only this plugin can open this kind of virtual document.
-    // & So it is no need to refresh the state.
-    if (isVirtual(document)) {
+    if (isVirtualUri(document.uri)) {
       return;
     }
 
     const state = states.get(document.uri.toString()) ?? add(document.uri);
 
     try {
-      const raw = await vscode.workspace.fs.readFile(state.sourceUriStr);
+      const raw = await vscode.workspace.fs.readFile(state.sourceUri);
       const content = Buffer.from(raw).toString('utf8');
-      state.encrypted = isEncrypted(content);
+      state.encrypted = CrypNote.isEncrypted(content);
     } catch {
       if (document.uri.scheme === 'file') {
-        state.encrypted = isEncrypted(document.getText());
+        state.encrypted = CrypNote.isEncrypted(document.getText());
       }
     }
   };
@@ -109,10 +126,5 @@ export namespace notes {
     remove(uri);
   };
 
-  const isEncrypted = (s: string) => s.startsWith(EncrytConfig.FileFlag) || s.startsWith(EncrytConfig.FileFlagWithBom);
-
-  export const isVirtual = (document: vscode.TextDocument) => document.uri.scheme === EncrytConfig.UriScheme;
-
-  export const isVirtualUri = (uri: vscode.Uri): boolean =>
-    states.get(uri.toString())?.virtualUriStr.toString() === uri.toString();
+  export const isVirtualUri = (uri: vscode.Uri): boolean => uri.scheme === EncrytConfig.UriScheme;
 }
