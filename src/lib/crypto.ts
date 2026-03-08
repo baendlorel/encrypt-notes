@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
 
 import { EncrytConfig } from '../core/consts.js';
-import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
+import { NoteError } from './errors.js';
 
 export namespace CrypNote {
   const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer =>
@@ -14,33 +14,33 @@ export namespace CrypNote {
     try {
       parsed = JSON.parse(rawHeader.replace(/^\uFEFF/, ''));
     } catch {
-      throw new InvalidEncryptedFileError('Encrypted header is not valid JSON.');
+      throw new NoteError.InvalidEncryptedFileError('Encrypted header is not valid JSON.');
     }
 
     if (!parsed || typeof parsed !== 'object') {
-      throw new InvalidEncryptedFileError('Encrypted header must be an object.');
+      throw new NoteError.InvalidEncryptedFileError('Encrypted header must be an object.');
     }
 
     const { v, alg, kdf, iter = 0, salt, iv, tag } = parsed as Partial<EncryptedHeader>;
 
     if (v !== 1) {
-      throw new InvalidEncryptedFileError('Unsupported encrypted file version.');
+      throw new NoteError.InvalidEncryptedFileError('Unsupported encrypted file version.');
     }
 
     if (alg !== 'AES-256-GCM') {
-      throw new InvalidEncryptedFileError('Unsupported encryption algorithm.');
+      throw new NoteError.InvalidEncryptedFileError('Unsupported encryption algorithm.');
     }
 
     if (kdf !== 'PBKDF2-SHA256') {
-      throw new InvalidEncryptedFileError('Unsupported key derivation function.');
+      throw new NoteError.InvalidEncryptedFileError('Unsupported key derivation function.');
     }
 
     if (!Number.isInteger(iter) || iter <= 0) {
-      throw new InvalidEncryptedFileError('Invalid PBKDF2 iteration count.');
+      throw new NoteError.InvalidEncryptedFileError('Invalid PBKDF2 iteration count.');
     }
 
     if (typeof salt !== 'string' || typeof iv !== 'string' || typeof tag !== 'string') {
-      throw new InvalidEncryptedFileError('Encrypted header is missing required fields.');
+      throw new NoteError.InvalidEncryptedFileError('Encrypted header is missing required fields.');
     }
 
     return { v, alg, kdf, iter, salt, iv, tag };
@@ -58,13 +58,13 @@ export namespace CrypNote {
     const headerIndex = 1;
     const payloadIndex = 2;
     if (lines.length <= payloadIndex) {
-      throw new InvalidEncryptedFileError('Encrypted file is incomplete.');
+      throw new NoteError.InvalidEncryptedFileError('Encrypted file is incomplete.');
     }
 
     const header = parseHeader(lines[headerIndex]);
     const cipherTextBase64 = lines.slice(payloadIndex).join('').trim(); // & more compatible when there is extra newlines in the end of the file
     if (cipherTextBase64.length === 0) {
-      throw new InvalidEncryptedFileError('Encrypted payload is empty.');
+      throw new NoteError.InvalidEncryptedFileError('Encrypted payload is empty.');
     }
 
     return { header, ciphertext: Buffer.from(cipherTextBase64, 'base64') };
@@ -106,7 +106,7 @@ export namespace CrypNote {
     const tag = Buffer.from(header.tag, 'base64');
 
     if (salt.length !== EncrytConfig.SaltLength || iv.length !== EncrytConfig.IvLength || tag.length !== 16) {
-      throw new InvalidEncryptedFileError('Encrypted metadata has invalid lengths.');
+      throw new NoteError.InvalidEncryptedFileError('Encrypted metadata has invalid lengths.');
     }
 
     const key = deriveKey(password, salt, header.iter);
@@ -117,7 +117,7 @@ export namespace CrypNote {
       const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
       return plainText.toString('utf8');
     } catch {
-      throw new InvalidPasswordError('Password is incorrect or file is corrupted.');
+      throw new NoteError.InvalidPasswordError('Password is incorrect or file is corrupted.');
     }
   };
 }

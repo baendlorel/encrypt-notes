@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { Commands, EncrytConfig } from './core/consts.js';
 import { configs } from './core/config.js';
 import { t } from './i18n/index.js';
-import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
+import { NoteError } from './lib/errors.js';
 
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
@@ -113,7 +113,7 @@ const confirmDecrypt = async (document: vscode.TextDocument): Promise<string | u
     CrypNote.decrypt(encryptedContent, password);
     return password; // ?? 这里怎么返回密码？
   } catch (error) {
-    showDecryptError(error);
+    NoteError.display(error);
     return undefined;
   }
 };
@@ -149,20 +149,6 @@ const updateEditorContext = async (): Promise<void> => {
   codeLensChangeEmitter.fire();
 };
 
-const showDecryptError = (error: unknown): void => {
-  if (error instanceof InvalidPasswordError) {
-    vsc.showError(t('error.decrypt.invalidPassword'));
-    return;
-  }
-
-  if (error instanceof InvalidEncryptedFileError) {
-    vsc.showError(t('error.decrypt.invalidFile', error.message));
-    return;
-  }
-
-  vsc.showError(t('error.decrypt.failed'));
-};
-
 const clearSessionState = (sourceKey: string): void => {
   passwordCache.delete(sourceKey);
   decryptedSession.delete(sourceKey);
@@ -184,9 +170,9 @@ const openVirtualEditor = async (
   }
 
   try {
-    decryptText(sourceDocument.getText(), password);
+    CrypNote.decrypt(sourceDocument.getText(), password);
   } catch (error) {
-    showDecryptError(error);
+    NoteError.display(error);
     return false;
   }
 
@@ -215,7 +201,7 @@ const openVirtualEditor = async (
 const tryDecrypt = async (document: vscode.TextDocument, showSuccessMessage = true): Promise<boolean> => {
   const sourceKey = ve.getSourceUriKey(document.uri);
 
-  if (!isEncryptedText(document.getText())) {
+  if (!CrypNote.isEncrypted(document.getText())) {
     return false;
   }
 
