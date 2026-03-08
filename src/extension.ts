@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
 
-import { Commands } from './core/consts.js';
+import { Commands, EncrytConfig } from './core/consts.js';
 import { configs } from './core/config.js';
 import { t } from './i18n/index.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
 
-import { CrypNote } from './lib/crypto.js';
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
 import { Note } from './virtual-edit/state.js';
 import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
+import { CrypNote } from './lib/crypto.js';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>(); // refactor 只has过一次
@@ -18,21 +18,6 @@ const decryptPromptInProgress = new Set<string>();
 const encryptedOnDiskState = new Map<string, boolean>();
 
 const codeLensChangeEmitter = new vscode.EventEmitter<void>();
-
-const getEncryptedOnDiskState = (document: vscode.TextDocument): boolean => {
-  const sourceKey = ve.getSourceUriKey(document.uri);
-  const cached = encryptedOnDiskState.get(sourceKey);
-
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  if (ve.isVirtual(document)) {
-    return true;
-  }
-
-  return Note.isEncrypted(document.getText());
-};
 
 class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
   public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
@@ -46,9 +31,10 @@ class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     const isSourceFile = document.uri.scheme === 'file';
-    const encryptedOnDisk = getEncryptedOnDiskState(document);
+    // todo 如果文件在外部变化，可能这里也要侦听
+    const encryptedOnDisk = getEncryptedOnDiskState(document); // refactor 这里读取文件加上
     const canEncrypt = isSourceFile && !encryptedOnDisk;
-    const canDecrypt = (isSourceFile && encryptedOnDisk) || ve.isVirtual(document);
+    const canDecrypt = (isSourceFile && encryptedOnDisk) || Note.isVirtualUri(document.uri);
 
     if (!canEncrypt && !canDecrypt) {
       return [];
@@ -86,15 +72,7 @@ const isSupportedDocument = (document: vscode.TextDocument): boolean => {
   if (sourceUri.scheme !== 'file') {
     return false;
   }
-
-  const sourceKey = ve.getSourceUriKey(document.uri);
-
-  return (
-    getEncryptedOnDiskState(document) ||
-    isEncryptedText(document.getText()) ||
-    configs.supports(sourceUri) ||
-    decryptedSession.has(sourceKey)
-  );
+  return configs.supports(document.uri);
 };
 
 const promptPassword = async (prompt: string): Promise<string | undefined> => {
@@ -156,23 +134,24 @@ const replaceDocumentText = async (document: vscode.TextDocument, nextContent: s
 };
 
 const updateEditorContext = async (): Promise<void> => {
-  const activeDocument = vscode.window.activeTextEditor?.document;
+  const document = vscode.window.activeTextEditor?.document;
 
-  await vsc.setContext('showCodeLensActions', configs.buttonOnFirstLine);
-  await vsc.setContext('showTitleActions', configs.buttonOnEditorTitle);
+  await vsc.setContext('buttonOnEditorTitle', configs.buttonOnEditorTitle);
 
-  if (!activeDocument) {
+  if (!document) {
     await vsc.setContext('canEncrypt', false);
     await vsc.setContext('canDecrypt', false);
     codeLensChangeEmitter.fire();
     return;
   }
 
-  const supported = isSupportedDocument(activeDocument);
-  const encryptedOnDisk = getEncryptedOnDiskState(activeDocument); // todo 疑似和上面的supported重复判定
-  const isSourceFile = activeDocument.uri.scheme === 'file';
+  const supported =
+    document.uri.scheme === EncrytConfig.UriScheme ||
+    (document.uri.scheme === 'file' && configs.supports(document.uri));
+  const encryptedOnDisk = CrypNote.isEncrypted(document.getText()); // todo 疑似和上面的supported重复判定
+  const isSourceFile = document.uri.scheme === 'file';
   const canEncrypt = supported && !encryptedOnDisk;
-  const canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || ve.isVirtual(activeDocument));
+  const canDecrypt = supported && ((isSourceFile && encryptedOnDisk) || ve.isVirtual(document));
 
   await vsc.setContext('canEncrypt', canEncrypt);
   await vsc.setContext('canDecrypt', canDecrypt);

@@ -24,7 +24,7 @@ export namespace Consts {
   export const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
 }
 
-export type ContextKey = 'canEncrypt' | 'canDecrypt' | 'showCodeLensActions' | 'showTitleActions';
+export type ContextKey = 'canEncrypt' | 'canDecrypt' | 'buttonOnEditorTitle';
 
 export namespace Configs {
   export const DefaultFileExtensions = ['.txt', '.md'];

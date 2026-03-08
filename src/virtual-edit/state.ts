@@ -4,7 +4,7 @@ import { vsc } from '../core/methods.js';
 import { t } from '../i18n/index.js';
 import { CrypNote } from '../lib/crypto.js';
 
-const getVirtualDisplayPath = (sourceUri: vscode.Uri): string => {
+const createVirtualPath = (sourceUri: vscode.Uri): string => {
   const sourcePath = sourceUri.path;
   const lastSlash = sourcePath.lastIndexOf('/');
   const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
@@ -30,6 +30,7 @@ class NoteState {
 
   /**
    * Avoid decrypting again
+   * - original name is `decryptPromptInProgress`
    */
   locked: boolean = false;
 
@@ -39,7 +40,7 @@ class NoteState {
     this.sourceUri = sourceUri;
     this.virtualUri = sourceUri.with({
       scheme: EncrytConfig.UriScheme,
-      path: getVirtualDisplayPath(sourceUri),
+      path: createVirtualPath(sourceUri),
       query: encodeURIComponent(sourceUri.toString()),
       fragment: '',
     });

@@ -40,10 +40,16 @@ class EncryptNotesConfiguration {
     return this.fileExtensions.has(args);
   }
 
+  /**
+   * If `true`, show the code lens action buttons.
+   */
   get buttonOnFirstLine(): boolean {
     return this.buttonLocation === Configs.ButtonLocation.FirstLine;
   }
 
+  /**
+   * If `true`, show action buttons on the editor title.
+   */
   get buttonOnEditorTitle(): boolean {
     return this.buttonLocation === Configs.ButtonLocation.EditorTitle;
   }
