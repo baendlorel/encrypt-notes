@@ -1,4 +1,5 @@
 import vscode from 'vscode';
+import { AesConfig } from '../core/consts.js';
 import { vsc } from '../core/methods.js';
 import { ve } from './methods.js';
 
@@ -15,7 +16,7 @@ class NoteState {
 
   decryptPromptInProgress: boolean = false;
 
-  encryptedOnDisk: boolean = false;
+  encrypted: boolean = false;
 
   constructor(sourceUri: vscode.Uri) {
     this.sourceUri = sourceUri;
@@ -27,7 +28,7 @@ class NoteState {
     this.decryptedInSession = false;
     this.skippedAutoDecrypt = false;
     this.decryptPromptInProgress = false;
-    this.encryptedOnDisk = false;
+    this.encrypted = false;
   }
 }
 
@@ -35,42 +36,62 @@ class NoteState {
  * Both sourceUri and virtualUri can get the same `NoteState` object.
  */
 export namespace notes {
-  const states = new WeakMap<vscode.Uri, NoteState>();
+  const states = new Map<string, NoteState>();
+
   export const add = (sourceUri: vscode.Uri) => {
     const o = new NoteState(sourceUri);
-    states.set(sourceUri, o);
-    states.set(o.virtualUri, o);
+    states.set(sourceUri.toString(), o);
+    states.set(o.virtualUri.toString(), o);
   };
 
   export const remove = (uri: vscode.Uri) => {
-    const state = states.get(uri);
+    const state = states.get(uri.toString());
     if (state) {
-      states.delete(state.sourceUri);
-      states.delete(state.virtualUri);
+      states.delete(state.sourceUri.toString());
+      states.delete(state.virtualUri.toString());
     }
   };
 
   export const modify = (uri: vscode.Uri, state: Partial<NoteState>) => {
-    const o = states.get(uri);
+    const o = states.get(uri.toString());
     if (o) {
       Object.assign(o, state);
     }
     vsc.showError(`NoteState not found for ${uri.toString()}`);
   };
 
-  export const get = (uri: vscode.Uri): NoteState | undefined => {
-    return states.get(uri);
+  export const get = (uri: vscode.Uri): NoteState | undefined => states.get(uri.toString());
+
+  // # services
+  const isEncrypted = (content: string) =>
+    content.startsWith(AesConfig.EncryptedFileFlag) || content.startsWith(AesConfig.EncryptedFileFlagWithBom);
+
+  export const refresh = async (document: vscode.TextDocument) => {
+    const state = states.get(document.uri.toString());
+    if (!state) {
+      return;
+    }
+
+    try {
+      const raw = await vscode.workspace.fs.readFile(state.sourceUri);
+      const content = Buffer.from(raw).toString('utf8');
+      state.encrypted = isEncrypted(content);
+    } catch {
+      if (document.uri.scheme === 'file') {
+        state.encrypted = isEncrypted(document.getText());
+      }
+    }
   };
 
   export const closeRelatedTabs = async (uri: vscode.Uri) => {
-    const state = states.get(uri);
+    const state = states.get(uri.toString());
     if (!state) {
       return;
     }
 
     const tabs = vscode.window.tabGroups.all
       .flatMap((group) => group.tabs)
-      .filter((tab) => tab.input instanceof vscode.TabInputText && states.has(tab.input.uri));
+      .filter((tab) => tab.input instanceof vscode.TabInputText && states.has(tab.input.uri.toString()));
 
     if (tabs.length === 0) {
       return;
@@ -80,5 +101,6 @@ export namespace notes {
     remove(uri);
   };
 
-  export const isVirtualUri = (uri: vscode.Uri): boolean => states.get(uri)?.virtualUri.toString() === uri.toString();
+  export const isVirtualUri = (uri: vscode.Uri): boolean =>
+    states.get(uri.toString())?.virtualUri.toString() === uri.toString();
 }

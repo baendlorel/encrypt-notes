@@ -8,6 +8,7 @@ export namespace AesConfig {
   export const Pbkdf2Digest = 'sha256';
   export const Pbkdf2Iterations = 210000;
   export const EncryptedFileFlag = 'ENCRYPTED_FILE';
+  export const EncryptedFileFlagWithBom = '\uFEFFENCRYPTED_FILE';
 }
 
 export namespace Consts {

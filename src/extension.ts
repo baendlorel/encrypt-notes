@@ -18,25 +18,6 @@ const encryptedOnDiskState = new Map<string, boolean>();
 
 const codeLensChangeEmitter = new vscode.EventEmitter<void>();
 
-const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promise<void> => {
-  const sourceUri = ve.getSourceUri(document.uri);
-  if (sourceUri.scheme !== 'file') {
-    return;
-  }
-
-  const sourceKey = ve.getUriKey(sourceUri);
-
-  try {
-    const raw = await vscode.workspace.fs.readFile(sourceUri);
-    const content = Buffer.from(raw).toString('utf8');
-    encryptedOnDiskState.set(sourceKey, isEncryptedText(content));
-  } catch {
-    if (document.uri.scheme === 'file') {
-      encryptedOnDiskState.set(sourceKey, isEncryptedText(document.getText()));
-    }
-  }
-};
-
 const getEncryptedOnDiskState = (document: vscode.TextDocument): boolean => {
   const sourceKey = ve.getSourceUriKey(document.uri);
   const cached = encryptedOnDiskState.get(sourceKey);
@@ -242,7 +223,7 @@ const openVirtualEditor = async (
     note.password = password;
     note.decryptedInSession = true;
     note.skippedAutoDecrypt = false;
-    note.encryptedOnDisk = true;
+    note.encrypted = true;
 
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
     const virtualDocument = await vscode.workspace.openTextDocument(note.virtualUri);
@@ -260,7 +241,7 @@ const openVirtualEditor = async (
   }
 };
 
-const tryDecryptDocument = async (document: vscode.TextDocument, showSuccessMessage = true): Promise<boolean> => {
+const tryDecrypt = async (document: vscode.TextDocument, showSuccessMessage = true): Promise<boolean> => {
   const sourceKey = ve.getSourceUriKey(document.uri);
 
   if (!isEncryptedText(document.getText())) {
@@ -450,6 +431,7 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
   }
 };
 
+// refactor 尝试利用notes缩减
 const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => {
   if (document?.uri.scheme !== 'file') {
     return;
@@ -476,7 +458,7 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
   decryptPromptInProgress.add(sourceKey);
 
   try {
-    const success = await tryDecryptDocument(document, false);
+    const success = await tryDecrypt(document, false);
 
     if (!success) {
       skippedAutoDecrypt.add(sourceKey);
@@ -514,13 +496,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('encrypted-notes.encrypt', () => handleActiveDocument('encrypt')),
     vscode.commands.registerCommand('encrypted-notes.decrypt', () => handleActiveDocument('decrypt')),
     vscode.workspace.onDidOpenTextDocument(async (document) => {
-      await refreshEncryptedOnDiskState(document);
+      await notes.refresh(document);
       await tryAutoDecrypt(document);
       await updateEditorContext();
     }),
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       if (editor) {
-        await refreshEncryptedOnDiskState(editor.document);
+        await notes.refresh(editor.document);
         await tryAutoDecrypt(editor.document);
       }
 
@@ -532,15 +514,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
           await notes.closeRelatedTabs(input.uri);
         }
       }
-      updateEditorContext();
+      await updateEditorContext();
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       if (vscode.window.activeTextEditor?.document.uri.toString() === event.document.uri.toString()) {
         updateEditorContext();
       }
     }),
+    // refactor 这里可能是控制自动保存的
     vscode.workspace.onDidSaveTextDocument(async (document) => {
-      await refreshEncryptedOnDiskState(document);
+      await notes.refresh(document);
 
       const sourceKey = ve.getSourceUriKey(document.uri);
       if (ve.isVirtual(document)) {
@@ -585,7 +568,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
   const activeDocument = vscode.window.activeTextEditor?.document;
   if (activeDocument) {
-    await refreshEncryptedOnDiskState(activeDocument);
+    await notes.refresh(activeDocument);
   }
 
   await updateEditorContext();
