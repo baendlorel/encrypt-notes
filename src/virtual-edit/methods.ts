@@ -1,8 +1,6 @@
 import vscode from 'vscode';
 
 export namespace ve {
-  export const Scheme = 'encrypted-notes-decrypted';
-
   export const getUriKey = (uri: vscode.Uri): string => uri.toString();
   export const getSourceUri = (uri: vscode.Uri): vscode.Uri => toSourceUri(uri) ?? uri;
   export const getSourceUriKey = (uri: vscode.Uri): string => getUriKey(getSourceUri(uri));

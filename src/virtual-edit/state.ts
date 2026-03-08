@@ -22,7 +22,7 @@ class NoteState {
 
   virtualUri: vscode.Uri;
 
-  password: string | null = null;
+  password: string | undefined = undefined;
 
   decryptedInSession: boolean = false;
 
@@ -46,8 +46,15 @@ class NoteState {
     });
   }
 
+  /**
+   * When not encrypted, locked or skippedAutoDecrypt
+   */
+  get cannotDecrypt() {
+    return !this.encrypted || this.locked || this.skippedAutoDecrypt;
+  }
+
   clear() {
-    this.password = null;
+    this.password = undefined;
     this.decryptedInSession = false;
     this.skippedAutoDecrypt = false;
     this.locked = false;
@@ -91,21 +98,23 @@ export namespace Note {
    * Aim to refresh the state of the source file, not the virtual one.
    */
   // refactor 我觉得只要在save和open新文件的时候用一下此函数就可以了
-  export const refresh = async (document: vscode.TextDocument) => {
-    if (isVirtualUri(document.uri)) {
-      return;
-    }
-
+  export const refresh = async (document: vscode.TextDocument): Promise<NoteState> => {
     const state = states.get(document.uri.toString()) ?? add(document.uri);
+
+    if (isVirtualUri(document.uri)) {
+      return state;
+    }
 
     try {
       const raw = await vscode.workspace.fs.readFile(state.sourceUri);
       const content = Buffer.from(raw).toString('utf8');
-      state.encrypted = CrypNote.isEncrypted(content);
+      state.encrypted = CrypNote.isEncryptedText(content);
+      return state;
     } catch {
       if (document.uri.scheme === 'file') {
-        state.encrypted = CrypNote.isEncrypted(document.getText());
+        state.encrypted = CrypNote.isEncrypted(document);
       }
+      return state;
     }
   };
 

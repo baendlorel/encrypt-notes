@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import vscode from 'vscode';
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
 
 import { EncrytConfig } from '../core/consts.js';
@@ -70,8 +71,11 @@ export namespace CrypNote {
     return { header, ciphertext: Buffer.from(cipherTextBase64, 'base64') };
   };
 
-  export const isEncrypted = (s: string): boolean =>
+  export const isEncryptedText = (s: string) =>
     s.startsWith(EncrytConfig.Flag) || s.startsWith(EncrytConfig.FlagWithBom);
+
+  export const isEncrypted = (document: vscode.TextDocument)=>isEncryptedText(document.getText());
+  };
 
   export const encrypt = (plainText: string, password: string): string => {
     const salt = crypto.randomBytes(EncrytConfig.SaltLength);
