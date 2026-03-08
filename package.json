@@ -102,11 +102,11 @@
     }
   },
   "scripts": {
-    "lines": "clear && find ./src -type f \\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.mjs\" -o -name \"*.cjs\" -o -name \"*.cpp\" -o -name \"*.h\" -o -name \"*.py\"  -o -name \"*.css\" -o -name \"*.rs\" -o -name \"*.rc\" \\) | xargs wc -l",
     "test-build": "pnpm build",
     "build": "rimraf out && tsc -p tsconfig.build.json",
     "watch": "tsc -watch -p tsconfig.build.json",
     "check": "tsc -p tsconfig.build.json --noEmit",
+    "lines": "tsx ./scripts/lines.ts",
     "lint": "oxlint .",
     "pub": "vsce package -o ./bin",
     "publish": "pnpm build && vsce publish"

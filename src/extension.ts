@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { Commands, ContextKey } from './core/consts.js';
+import { Commands } from './core/consts.js';
 import { configs } from './core/config.js';
 import { decryptText, encryptText, isEncryptedText } from './lib/crypto.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './lib/errors.js';
@@ -111,7 +111,7 @@ const isSupportedDocument = (document: vscode.TextDocument): boolean => {
     getEncryptedOnDiskState(document) ||
     isEncryptedText(document.getText()) ||
     configs.supports(sourceUri) ||
-    decryptedSession.has(sourceKey)
+    decryptedSession.has(sourceKey) // refactor 就这里has过一次
   );
 };
 
