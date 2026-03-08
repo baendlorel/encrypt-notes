@@ -51,9 +51,9 @@ export namespace notes {
   };
 
   export const modify = (uri: vscode.Uri, state: Partial<NoteState>) => {
-    const v = states.get(uri);
-    if (v) {
-      Object.assign(v, state);
+    const o = states.get(uri);
+    if (o) {
+      Object.assign(o, state);
     }
     vsc.showError(`NoteState not found for ${uri.toString()}`);
   };
@@ -61,4 +61,6 @@ export namespace notes {
   export const get = (uri: vscode.Uri): NoteState | undefined => {
     return states.get(uri);
   };
+
+  export const isVirtualUri = (uri: vscode.Uri): boolean => states.get(uri)?.virtualUri.toString() === uri.toString();
 }
