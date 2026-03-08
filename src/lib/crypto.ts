@@ -1,11 +1,11 @@
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
-import { AesConfig, Consts } from '../core/consts.js';
+import { EncrytConfig, Consts } from '../core/consts.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
 
 const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer => {
-  return pbkdf2Sync(password, salt, iterations, AesConfig.KeyLength, AesConfig.Pbkdf2Digest);
+  return pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
 };
 
 const stripUtf8Bom = (line: string): string => (line.startsWith(Consts.UTF8_BOM) ? line.slice(1) : line);
@@ -15,7 +15,7 @@ const findEncryptedFlagLineIndex = (lines: readonly string[]): number => {
 
   for (let i = 0; i < maxLineCount; i++) {
     const normalizedLine = stripUtf8Bom(lines[i] ?? '').trim();
-    if (normalizedLine.startsWith(AesConfig.EncryptedFileFlag)) {
+    if (normalizedLine.startsWith(EncrytConfig.EncryptedFileFlag)) {
       return i;
     }
   }
@@ -104,11 +104,11 @@ const parseEncryptedText = (content: string): ParsedEncryptedFile => {
 };
 
 export const encryptText = (plainText: string, password: string): string => {
-  const salt = randomBytes(AesConfig.SaltLength);
-  const iv = randomBytes(AesConfig.IvLength);
-  const key = deriveKey(password, salt, AesConfig.Pbkdf2Iterations);
+  const salt = randomBytes(EncrytConfig.SaltLength);
+  const iv = randomBytes(EncrytConfig.IvLength);
+  const key = deriveKey(password, salt, EncrytConfig.Pbkdf2Iterations);
 
-  const cipher = createCipheriv(AesConfig.Algorithm, key, iv);
+  const cipher = createCipheriv(EncrytConfig.Algorithm, key, iv);
   const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
 
@@ -116,13 +116,13 @@ export const encryptText = (plainText: string, password: string): string => {
     v: 1,
     alg: 'AES-256-GCM',
     kdf: 'PBKDF2-SHA256',
-    iter: AesConfig.Pbkdf2Iterations,
+    iter: EncrytConfig.Pbkdf2Iterations,
     salt: salt.toString('base64'),
     iv: iv.toString('base64'),
     tag: tag.toString('base64'),
   };
 
-  return [AesConfig.EncryptedFileFlag, JSON.stringify(header), ciphertext.toString('base64')].join('\n');
+  return [EncrytConfig.EncryptedFileFlag, JSON.stringify(header), ciphertext.toString('base64')].join('\n');
 };
 
 export const decryptText = (content: string, password: string): string => {
@@ -132,14 +132,14 @@ export const decryptText = (content: string, password: string): string => {
   const iv = Buffer.from(header.iv, 'base64');
   const tag = Buffer.from(header.tag, 'base64');
 
-  if (salt.length !== AesConfig.SaltLength || iv.length !== AesConfig.IvLength || tag.length !== 16) {
+  if (salt.length !== EncrytConfig.SaltLength || iv.length !== EncrytConfig.IvLength || tag.length !== 16) {
     throw new InvalidEncryptedFileError('Encrypted metadata has invalid lengths.');
   }
 
   const key = deriveKey(password, salt, header.iter);
 
   try {
-    const decipher = createDecipheriv(AesConfig.Algorithm, key, iv);
+    const decipher = createDecipheriv(EncrytConfig.Algorithm, key, iv);
     decipher.setAuthTag(tag);
     const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
     return plainText.toString('utf8');

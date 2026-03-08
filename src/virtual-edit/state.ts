@@ -1,5 +1,5 @@
 import vscode from 'vscode';
-import { AesConfig } from '../core/consts.js';
+import { EncrytConfig } from '../core/consts.js';
 import { vsc } from '../core/methods.js';
 import { ve } from './methods.js';
 
@@ -38,10 +38,11 @@ class NoteState {
 export namespace notes {
   const states = new Map<string, NoteState>();
 
-  export const add = (sourceUri: vscode.Uri) => {
+  export const add = (sourceUri: vscode.Uri): NoteState => {
     const o = new NoteState(sourceUri);
     states.set(sourceUri.toString(), o);
     states.set(o.virtualUri.toString(), o);
+    return o;
   };
 
   export const remove = (uri: vscode.Uri) => {
@@ -63,14 +64,18 @@ export namespace notes {
   export const get = (uri: vscode.Uri): NoteState | undefined => states.get(uri.toString());
 
   // # services
-  const isEncrypted = (content: string) =>
-    content.startsWith(AesConfig.EncryptedFileFlag) || content.startsWith(AesConfig.EncryptedFileFlagWithBom);
-
+  /**
+   * Aim to refresh the state of the source file, not the virtual one.
+   */
+  // refactor 我觉得只要在save和open新文件的时候用一下此函数就可以了
   export const refresh = async (document: vscode.TextDocument) => {
-    const state = states.get(document.uri.toString());
-    if (!state) {
+    // & Only this plugin can open this kind of virtual document.
+    // & So it is no need to refresh the state.
+    if (isVirtual(document)) {
       return;
     }
+
+    const state = states.get(document.uri.toString()) ?? add(document.uri);
 
     try {
       const raw = await vscode.workspace.fs.readFile(state.sourceUri);
@@ -100,6 +105,10 @@ export namespace notes {
     await vscode.window.tabGroups.close(tabs, true);
     remove(uri);
   };
+
+  const isEncrypted = (s: string) => s.startsWith(EncrytConfig.FileFlag) || s.startsWith(EncrytConfig.FileFlagWithBom);
+
+  export const isVirtual = (document: vscode.TextDocument) => document.uri.scheme === EncrytConfig.UriScheme;
 
   export const isVirtualUri = (uri: vscode.Uri): boolean =>
     states.get(uri.toString())?.virtualUri.toString() === uri.toString();

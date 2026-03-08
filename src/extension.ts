@@ -501,6 +501,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       await updateEditorContext();
     }),
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+      // refactor 切换活动的文本编辑器的时候触发
       if (editor) {
         await notes.refresh(editor.document);
         await tryAutoDecrypt(editor.document);

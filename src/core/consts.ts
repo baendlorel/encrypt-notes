@@ -1,14 +1,17 @@
 import { ButtonLocationRaw } from '../lib/types.js';
 
-export namespace AesConfig {
+export namespace EncrytConfig {
   export const Algorithm = 'aes-256-gcm';
   export const KeyLength = 32;
   export const IvLength = 12;
   export const SaltLength = 16;
   export const Pbkdf2Digest = 'sha256';
   export const Pbkdf2Iterations = 210000;
-  export const EncryptedFileFlag = 'ENCRYPTED_FILE';
-  export const EncryptedFileFlagWithBom = '\uFEFFENCRYPTED_FILE';
+
+  // flags
+  export const FileFlag = 'ENCRYPTED_FILE';
+  export const FileFlagWithBom = '\uFEFFENCRYPTED_FILE';
+  export const UriScheme = 'encrypted-notes-decrypted';
 }
 
 export namespace Consts {
