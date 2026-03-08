@@ -207,7 +207,7 @@ const openVirtualEditor = async (
 ): Promise<boolean> => {
   const note = notes.get(sourceDocument.uri);
 
-  if (note?.sourceUri.scheme !== 'file') {
+  if (note?.sourceUriStr.scheme !== 'file') {
     vsc.showError(t('error.onlyLocalFile'));
     return false;
   }
@@ -226,9 +226,9 @@ const openVirtualEditor = async (
     note.encrypted = true;
 
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
-    const virtualDocument = await vscode.workspace.openTextDocument(note.virtualUri);
+    const virtualDocument = await vscode.workspace.openTextDocument(note.virtualUriStr);
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
-    await ve.closeTabsForUri(note.sourceUri);
+    await ve.closeTabsForUri(note.sourceUriStr);
 
     if (showSuccessMessage) {
       vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
@@ -458,6 +458,7 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
   decryptPromptInProgress.add(sourceKey);
 
   try {
+    // refactor 这里会打开virtual editor
     const success = await tryDecrypt(document, false);
 
     if (!success) {

@@ -1,33 +1,19 @@
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
-import { EncrytConfig, Consts } from '../core/consts.js';
+import { EncrytConfig } from '../core/consts.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
 
-const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer => {
-  return pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
-};
+const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer =>
+  pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
 
-const stripUtf8Bom = (line: string): string => (line.startsWith(Consts.UTF8_BOM) ? line.slice(1) : line);
-
-const findEncryptedFlagLineIndex = (lines: readonly string[]): number => {
-  const maxLineCount = Math.min(2, lines.length);
-
-  for (let i = 0; i < maxLineCount; i++) {
-    const normalizedLine = stripUtf8Bom(lines[i] ?? '').trim();
-    if (normalizedLine.startsWith(EncrytConfig.FileFlag)) {
-      return i;
-    }
-  }
-
-  return -1;
-};
+const isEncrypted = (s: string) => s.startsWith(EncrytConfig.FileFlag) || s.startsWith(EncrytConfig.FileFlagWithBom);
 
 const parseHeader = (rawHeader: string): EncryptedHeader => {
   let parsed: unknown;
 
   try {
-    parsed = JSON.parse(rawHeader);
+    parsed = JSON.parse(rawHeader.replace(/^\uFEFF/, ''));
   } catch {
     throw new InvalidEncryptedFileError('Encrypted header is not valid JSON.');
   }
@@ -36,71 +22,54 @@ const parseHeader = (rawHeader: string): EncryptedHeader => {
     throw new InvalidEncryptedFileError('Encrypted header must be an object.');
   }
 
-  const header = parsed as Partial<EncryptedHeader>;
+  const { v, alg, kdf, iter = 0, salt, iv, tag } = parsed as Partial<EncryptedHeader>;
 
-  if (header.v !== 1) {
+  if (v !== 1) {
     throw new InvalidEncryptedFileError('Unsupported encrypted file version.');
   }
 
-  if (header.alg !== 'AES-256-GCM') {
+  if (alg !== 'AES-256-GCM') {
     throw new InvalidEncryptedFileError('Unsupported encryption algorithm.');
   }
 
-  if (header.kdf !== 'PBKDF2-SHA256') {
+  if (kdf !== 'PBKDF2-SHA256') {
     throw new InvalidEncryptedFileError('Unsupported key derivation function.');
   }
 
-  if (!Number.isInteger(header.iter) || (header.iter ?? 0) <= 0) {
+  if (!Number.isInteger(iter) || iter <= 0) {
     throw new InvalidEncryptedFileError('Invalid PBKDF2 iteration count.');
   }
 
-  if (typeof header.salt !== 'string' || typeof header.iv !== 'string' || typeof header.tag !== 'string') {
+  if (typeof salt !== 'string' || typeof iv !== 'string' || typeof tag !== 'string') {
     throw new InvalidEncryptedFileError('Encrypted header is missing required fields.');
   }
 
-  return {
-    v: header.v as number,
-    alg: header.alg as string,
-    kdf: header.kdf as string,
-    iter: header.iter as number,
-    salt: header.salt as string,
-    iv: header.iv as string,
-    tag: header.tag as string,
-  };
+  return { v, alg, kdf, iter, salt, iv, tag };
 };
 
 /**
- * First 2 lines may contain ENCRYPTED_FILE_FLAG.
- * Detection is strict: strip UTF-8 BOM, trim, then startsWith flag.
+ * `Content` has 3 lines
+ * 1. File flag
+ * 2. JSON stringified header (metadata)
+ * 3. Base64 encoded ciphertext
  */
-export const isEncryptedText = (content: string): boolean => findEncryptedFlagLineIndex(content.split(/\r?\n/)) !== -1;
-
+// refactor 一定是确认是加密过的才会使用这个函数，不需要判定了
 const parseEncryptedText = (content: string): ParsedEncryptedFile => {
   const lines = content.split(/\r?\n/);
-  const markerLineIndex = findEncryptedFlagLineIndex(lines);
-  if (markerLineIndex < 0) {
-    throw new InvalidEncryptedFileError('Missing encrypted file marker.');
-  }
 
-  const headerLineIndex = markerLineIndex + 1;
-  const payloadStartLineIndex = markerLineIndex + 2;
-  if (lines.length <= payloadStartLineIndex) {
+  const headerIndex = 1;
+  const payloadIndex = 2;
+  if (lines.length <= payloadIndex) {
     throw new InvalidEncryptedFileError('Encrypted file is incomplete.');
   }
 
-  const header = parseHeader(stripUtf8Bom(lines[headerLineIndex] ?? ''));
-  const cipherTextPayload = lines.slice(payloadStartLineIndex).join('').trim();
-
-  if (cipherTextPayload.length === 0) {
+  const header = parseHeader(lines[headerIndex]);
+  const cipherTextBase64 = lines.slice(payloadIndex).join('').trim(); // & more compatible when there is extra newlines in the end of the file
+  if (cipherTextBase64.length === 0) {
     throw new InvalidEncryptedFileError('Encrypted payload is empty.');
   }
 
-  const ciphertext = Buffer.from(cipherTextPayload, 'base64');
-  if (ciphertext.length === 0) {
-    throw new InvalidEncryptedFileError('Encrypted payload is invalid base64.');
-  }
-
-  return { header, ciphertext };
+  return { header, ciphertext: Buffer.from(cipherTextBase64, 'base64') };
 };
 
 export const encryptText = (plainText: string, password: string): string => {

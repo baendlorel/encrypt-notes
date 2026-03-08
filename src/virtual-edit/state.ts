@@ -4,9 +4,9 @@ import { vsc } from '../core/methods.js';
 import { ve } from './methods.js';
 
 class NoteState {
-  sourceUri: vscode.Uri;
+  sourceUriStr: string;
 
-  virtualUri: vscode.Uri;
+  virtualUriStr: string;
 
   password: string | null = null;
 
@@ -14,20 +14,23 @@ class NoteState {
 
   skippedAutoDecrypt: boolean = false;
 
-  decryptPromptInProgress: boolean = false;
+  /**
+   * Avoid decrypting again
+   */
+  locked: boolean = false;
 
   encrypted: boolean = false;
 
   constructor(sourceUri: vscode.Uri) {
-    this.sourceUri = sourceUri;
-    this.virtualUri = ve.toVirtualUri(sourceUri);
+    this.sourceUriStr = sourceUri.toString();
+    this.virtualUriStr = ve.toVirtualUri(sourceUri).toString();
   }
 
   clear() {
     this.password = null;
     this.decryptedInSession = false;
     this.skippedAutoDecrypt = false;
-    this.decryptPromptInProgress = false;
+    this.locked = false;
     this.encrypted = false;
   }
 }
@@ -41,15 +44,15 @@ export namespace notes {
   export const add = (sourceUri: vscode.Uri): NoteState => {
     const o = new NoteState(sourceUri);
     states.set(sourceUri.toString(), o);
-    states.set(o.virtualUri.toString(), o);
+    states.set(o.virtualUriStr.toString(), o);
     return o;
   };
 
   export const remove = (uri: vscode.Uri) => {
     const state = states.get(uri.toString());
     if (state) {
-      states.delete(state.sourceUri.toString());
-      states.delete(state.virtualUri.toString());
+      states.delete(state.sourceUriStr.toString());
+      states.delete(state.virtualUriStr.toString());
     }
   };
 
@@ -78,7 +81,7 @@ export namespace notes {
     const state = states.get(document.uri.toString()) ?? add(document.uri);
 
     try {
-      const raw = await vscode.workspace.fs.readFile(state.sourceUri);
+      const raw = await vscode.workspace.fs.readFile(state.sourceUriStr);
       const content = Buffer.from(raw).toString('utf8');
       state.encrypted = isEncrypted(content);
     } catch {
@@ -111,5 +114,5 @@ export namespace notes {
   export const isVirtual = (document: vscode.TextDocument) => document.uri.scheme === EncrytConfig.UriScheme;
 
   export const isVirtualUri = (uri: vscode.Uri): boolean =>
-    states.get(uri.toString())?.virtualUri.toString() === uri.toString();
+    states.get(uri.toString())?.virtualUriStr.toString() === uri.toString();
 }
