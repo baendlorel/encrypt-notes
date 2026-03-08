@@ -15,7 +15,7 @@ const findEncryptedFlagLineIndex = (lines: readonly string[]): number => {
 
   for (let i = 0; i < maxLineCount; i++) {
     const normalizedLine = stripUtf8Bom(lines[i] ?? '').trim();
-    if (normalizedLine.startsWith(EncrytConfig.EncryptedFileFlag)) {
+    if (normalizedLine.startsWith(EncrytConfig.FileFlag)) {
       return i;
     }
   }
@@ -122,7 +122,7 @@ export const encryptText = (plainText: string, password: string): string => {
     tag: tag.toString('base64'),
   };
 
-  return [EncrytConfig.EncryptedFileFlag, JSON.stringify(header), ciphertext.toString('base64')].join('\n');
+  return [EncrytConfig.FileFlag, JSON.stringify(header), ciphertext.toString('base64')].join('\n');
 };
 
 export const decryptText = (content: string, password: string): string => {
