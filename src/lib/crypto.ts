@@ -1,13 +1,11 @@
-import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
-
+import crypto from 'node:crypto';
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
+
 import { EncrytConfig } from '../core/consts.js';
 import { InvalidEncryptedFileError, InvalidPasswordError } from './errors.js';
 
 const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer =>
-  pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
-
-const isEncrypted = (s: string) => s.startsWith(EncrytConfig.FileFlag) || s.startsWith(EncrytConfig.FileFlagWithBom);
+  crypto.pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
 
 const parseHeader = (rawHeader: string): EncryptedHeader => {
   let parsed: unknown;
@@ -53,7 +51,6 @@ const parseHeader = (rawHeader: string): EncryptedHeader => {
  * 2. JSON stringified header (metadata)
  * 3. Base64 encoded ciphertext
  */
-// refactor 一定是确认是加密过的才会使用这个函数，不需要判定了
 const parseEncryptedText = (content: string): ParsedEncryptedFile => {
   const lines = content.split(/\r?\n/);
 
@@ -73,14 +70,12 @@ const parseEncryptedText = (content: string): ParsedEncryptedFile => {
 };
 
 export const encryptText = (plainText: string, password: string): string => {
-  const salt = randomBytes(EncrytConfig.SaltLength);
-  const iv = randomBytes(EncrytConfig.IvLength);
+  const salt = crypto.randomBytes(EncrytConfig.SaltLength);
+  const iv = crypto.randomBytes(EncrytConfig.IvLength);
   const key = deriveKey(password, salt, EncrytConfig.Pbkdf2Iterations);
 
-  const cipher = createCipheriv(EncrytConfig.Algorithm, key, iv);
-  const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
+  const cipher = crypto.createCipheriv(EncrytConfig.Algorithm, key, iv);
   const tag = cipher.getAuthTag();
-
   const header: EncryptedHeader = {
     v: 1,
     alg: 'AES-256-GCM',
@@ -91,9 +86,12 @@ export const encryptText = (plainText: string, password: string): string => {
     tag: tag.toString('base64'),
   };
 
-  return [EncrytConfig.FileFlag, JSON.stringify(header), ciphertext.toString('base64')].join('\n');
+  const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]).toString('base64');
+
+  return [EncrytConfig.FileFlag, JSON.stringify(header), ciphertext].join('\n');
 };
 
+// refactor 一定是确认是加密过的才会使用这个函数，不需要判定了
 export const decryptText = (content: string, password: string): string => {
   const { header, ciphertext } = parseEncryptedText(content);
 
@@ -108,7 +106,7 @@ export const decryptText = (content: string, password: string): string => {
   const key = deriveKey(password, salt, header.iter);
 
   try {
-    const decipher = createDecipheriv(EncrytConfig.Algorithm, key, iv);
+    const decipher = crypto.createDecipheriv(EncrytConfig.Algorithm, key, iv);
     decipher.setAuthTag(tag);
     const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
     return plainText.toString('utf8');
