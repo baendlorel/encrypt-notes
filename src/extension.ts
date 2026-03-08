@@ -8,6 +8,7 @@ import { t } from './i18n/index.js';
 import { vsc } from './core/methods.js';
 import { ve } from './virtual-edit/methods.js';
 import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
+import { notes } from './virtual-edit/state.js';
 
 const passwordCache = new Map<string, string>();
 const decryptedSession = new Set<string>(); // refactor 只has过一次
@@ -223,10 +224,9 @@ const openVirtualEditor = async (
   password: string,
   showSuccessMessage: boolean,
 ): Promise<boolean> => {
-  const sourceUri = ve.getSourceUri(sourceDocument.uri);
-  const sourceKey = ve.getUriKey(sourceUri);
+  const note = notes.get(sourceDocument.uri);
 
-  if (sourceUri.scheme !== 'file') {
+  if (note?.sourceUri.scheme !== 'file') {
     vsc.showError(t('error.onlyLocalFile'));
     return false;
   }
@@ -239,16 +239,15 @@ const openVirtualEditor = async (
   }
 
   try {
-    passwordCache.set(sourceKey, password);
-    decryptedSession.add(sourceKey);
-    skippedAutoDecrypt.delete(sourceKey);
-    encryptedOnDiskState.set(sourceKey, true);
+    note.password = password;
+    note.decryptedInSession = true;
+    note.skippedAutoDecrypt = false;
+    note.encryptedOnDisk = true;
 
-    const virtualUri = ve.toVirtualUri(sourceUri);
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
-    const virtualDocument = await vscode.workspace.openTextDocument(virtualUri);
+    const virtualDocument = await vscode.workspace.openTextDocument(note.virtualUri);
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
-    await ve.closeTabsForUri(sourceUri);
+    await ve.closeTabsForUri(note.sourceUri);
 
     if (showSuccessMessage) {
       vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
@@ -527,26 +526,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
       await updateEditorContext();
     }),
-    vscode.window.tabGroups.onDidChangeTabs((event) => {
-      for (const closedTab of event.closed) {
-        if (!(closedTab.input instanceof vscode.TabInputText)) {
-          continue;
+    vscode.window.tabGroups.onDidChangeTabs(async (event) => {
+      for (const { input } of event.closed) {
+        if (input instanceof vscode.TabInputText) {
+          await notes.closeAll(input.uri);
         }
-
-        if (!ve.isVirtualUri(closedTab.input.uri)) {
-          continue;
-        }
-
-        const sourceUri = ve.getSourceUri(closedTab.input.uri);
-        const sourceKey = ve.getUriKey(sourceUri);
-
-        if (ve.hasOpenVirtualTabForSource(sourceUri)) {
-          continue;
-        }
-
-        clearSessionState(sourceKey);
       }
-
       updateEditorContext();
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {

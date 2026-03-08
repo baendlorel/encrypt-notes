@@ -62,5 +62,23 @@ export namespace notes {
     return states.get(uri);
   };
 
+  export const closeAll = async (uri: vscode.Uri) => {
+    const state = states.get(uri);
+    if (!state) {
+      return;
+    }
+
+    const tabs = vscode.window.tabGroups.all
+      .flatMap((group) => group.tabs)
+      .filter((tab) => tab.input instanceof vscode.TabInputText && states.has(tab.input.uri));
+
+    if (tabs.length === 0) {
+      return;
+    }
+
+    await vscode.window.tabGroups.close(tabs, true);
+    remove(uri);
+  };
+
   export const isVirtualUri = (uri: vscode.Uri): boolean => states.get(uri)?.virtualUri.toString() === uri.toString();
 }
