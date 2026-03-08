@@ -74,8 +74,7 @@ export namespace CrypNote {
   export const isEncryptedText = (s: string) =>
     s.startsWith(EncrytConfig.Flag) || s.startsWith(EncrytConfig.FlagWithBom);
 
-  export const isEncrypted = (document: vscode.TextDocument)=>isEncryptedText(document.getText());
-  };
+  export const isEncrypted = (document: vscode.TextDocument) => isEncryptedText(document.getText());
 
   export const encrypt = (plainText: string, password: string): string => {
     const salt = crypto.randomBytes(EncrytConfig.SaltLength);

@@ -124,7 +124,7 @@ const apply = async (document: vscode.TextDocument, nextContent: string): Promis
   return vscode.workspace.applyEdit(edit);
 };
 
-const updateEditorContextAsync = async (): Promise<void> => {
+const updateContextAsync = async (): Promise<void> => {
   const document = vscode.window.activeTextEditor?.document;
 
   await vsc.setContext('buttonOnEditorTitle', configs.buttonOnEditorTitle);
@@ -352,7 +352,7 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
 
   if (mode === 'encrypt') {
     await encrypt(document);
-    await updateEditorContextAsync();
+    await updateContextAsync();
     return;
   }
 
@@ -369,7 +369,7 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
 
     passwordCache.set(ve.getSourceUriKey(document.uri), confirmedPassword);
     await decrypt(document);
-    await updateEditorContextAsync();
+    await updateContextAsync();
     return;
   }
 };
@@ -406,7 +406,7 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
     }
   } finally {
     state.locked = false;
-    await updateEditorContextAsync();
+    await updateContextAsync();
   }
 };
 
@@ -430,7 +430,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.onDidOpenTextDocument(async (document) => {
       await Note.refresh(document);
       await tryAutoDecrypt(document);
-      await updateEditorContextAsync();
+      await updateContextAsync();
     }),
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       // refactor 切换活动的文本编辑器的时候触发
@@ -439,7 +439,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         await tryAutoDecrypt(editor.document);
       }
 
-      await updateEditorContextAsync();
+      await updateContextAsync();
     }),
     vscode.window.tabGroups.onDidChangeTabs(async (event) => {
       for (const { input } of event.closed) {
@@ -447,11 +447,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
           await Note.closeRelatedTabs(input.uri);
         }
       }
-      await updateEditorContextAsync();
+      await updateContextAsync();
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       if (vscode.window.activeTextEditor?.document.uri.toString() === event.document.uri.toString()) {
-        updateEditorContextAsync();
+        updateContextAsync();
       }
     }),
     // refactor 这里可能是控制自动保存的
@@ -470,22 +470,20 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       }
 
       if (vscode.window.activeTextEditor?.document.uri.toString() === document.uri.toString()) {
-        await updateEditorContextAsync();
+        await updateContextAsync();
       }
     }),
-    vscode.workspace.onDidCloseTextDocument((document) => {
+    vscode.workspace.onDidCloseTextDocument(async (document) => {
       Note.remove(document.uri);
-      updateEditorContextAsync();
+      await updateContextAsync();
     }),
-    vscode.workspace.onDidChangeConfiguration((event) => {
-      if (!event.affectsConfiguration('encrypted-notes')) {
+    vscode.workspace.onDidChangeConfiguration(async (event) => {
+      if (!event.affectsConfiguration(Consts.ExtensionId)) {
         return;
       }
 
-      updateEditorContextAsync();
-
-      const activeDocument = vscode.window.activeTextEditor?.document;
-      tryAutoDecrypt(activeDocument);
+      await updateContextAsync();
+      await tryAutoDecrypt(vscode.window.activeTextEditor?.document);
     }),
   );
 
@@ -494,8 +492,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     await Note.refresh(activeDocument);
   }
 
-  await updateEditorContextAsync();
-
+  await updateContextAsync();
   await tryAutoDecrypt(activeDocument);
 };
 
