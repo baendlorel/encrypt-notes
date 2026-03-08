@@ -367,7 +367,7 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
       return;
     }
 
-    passwordCache.set(ve.getSourceUriKey(document.uri), confirmedPassword);
+    Note.modify(document.uri, { password: confirmedPassword });
     await decrypt(document);
     await updateContextAsync();
     return;
