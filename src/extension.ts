@@ -10,10 +10,11 @@ import { ve } from './virtual-edit/methods.js';
 import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
 
 const passwordCache = new Map<string, string>();
-const decryptedSession = new Set<string>();
+const decryptedSession = new Set<string>(); // refactor 只has过一次
 const skippedAutoDecrypt = new Set<string>();
 const decryptPromptInProgress = new Set<string>();
 const encryptedOnDiskState = new Map<string, boolean>();
+
 const codeLensChangeEmitter = new vscode.EventEmitter<void>();
 
 const refreshEncryptedOnDiskState = async (document: vscode.TextDocument): Promise<void> => {
@@ -51,8 +52,6 @@ const getEncryptedOnDiskState = (document: vscode.TextDocument): boolean => {
 };
 
 class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
-  public readonly onDidChangeCodeLenses = codeLensChangeEmitter.event;
-
   public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     if (!configs.buttonOnFirstLine) {
       return [];
@@ -111,7 +110,7 @@ const isSupportedDocument = (document: vscode.TextDocument): boolean => {
     getEncryptedOnDiskState(document) ||
     isEncryptedText(document.getText()) ||
     configs.supports(sourceUri) ||
-    decryptedSession.has(sourceKey) // refactor 就这里has过一次
+    decryptedSession.has(sourceKey)
   );
 };
 
