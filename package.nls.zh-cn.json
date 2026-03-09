@@ -3,7 +3,6 @@
   "command.encrypt.title": "加密当前文件",
   "command.decrypt.title": "永久解密当前文件",
   "configuration.title": "加密笔记",
-  "configuration.enabled.description": "启用加密文件处理能力。",
   "configuration.fileExtensions.description": "需要处理的文件扩展名（不带点），例如 `[\"txt\", \"md\"]`。",
   "configuration.actionButtonLocation.description": "选择加密/解密按钮显示位置。",
   "configuration.passwordKeepMinute.description": "密码缓存时间，单位为分钟。超过这个时间后，state 中缓存的密码应被清空。设为 `0` 表示不缓存。",

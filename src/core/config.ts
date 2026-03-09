@@ -8,7 +8,7 @@ class EncryptNotesConfiguration {
   private fileExtensions: Set<string> = new Set();
   private buttonLocation: Configs.ButtonLocation = Configs.DefaultButtonLocation;
 
-  passwordKeepTime = Configs.DefaultPasswordKeepMinute * 60 * 100;
+  passwordKeepTime = Configs.DefaultPasswordKeepMinute * 60 * 1000;
 
   update() {
     this.config = vscode.workspace.getConfiguration(Consts.ExtensionId);
@@ -28,7 +28,7 @@ class EncryptNotesConfiguration {
       this.config.get<number>('passwordKeepMinute', Configs.DefaultPasswordKeepMinute) * 60 * 1000;
     this.passwordKeepTime = Number.isFinite(rawPasswordKeepTime)
       ? Math.max(0, Math.floor(rawPasswordKeepTime))
-      : Configs.DefaultPasswordKeepMinute;
+      : Configs.DefaultPasswordKeepMinute * 60 * 1000;
   }
 
   /**

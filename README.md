@@ -6,19 +6,19 @@ Encrypt and decrypt text files in VS Code.
 
 - Adds lock/unlock buttons to the editor title area (top-right).
 - Adds conditional `Encrypt / Decrypt` CodeLens actions at the first line.
-- Supports manual encrypt/decrypt for current file.
+- Supports encrypting the current file and permanently decrypting decrypted sessions.
 - Provides a permanent decrypt action for decrypted sessions to save plaintext directly.
 - Automatically prompts for password when opening encrypted files.
 - Automatically encrypts decrypted content again when you save.
-- Lets you choose whether plaintext should be restored after save (helps avoid always-dirty markers).
-- Configurable file extension list (default includes `txt`, `md`, `json`, `yaml`, ...).
+- Configurable file extension list (default: `txt`, `md`).
+- Configurable password cache time.
 
 ## Encryption Format (v1)
 
 Encrypted files are stored as:
 
 ```text
-#__ENCRYPTED_FILE__#
+ENCRYPTED_FILE
 {"v":1,"alg":"AES-256-GCM","kdf":"PBKDF2-SHA256","iter":210000,"salt":"...","iv":"...","tag":"..."}
 <base64 ciphertext>
 ```
@@ -30,16 +30,15 @@ Encrypted files are stored as:
 
 ```json
 {
-  "encrypted-notes.enabled": true,
-  "encrypted-notes.fileExtensions": ["txt", "md"]
+  "encrypted-notes.fileExtensions": ["txt", "md"],
+  "encrypted-notes.actionButtonLocation": "Fisrt Line",
+  "encrypted-notes.passwordKeepMinute": 5
 }
 ```
 
 ## Commands
 
-- `Encrypted Notes: Toggle Encrypt/Decrypt`
 - `Encrypted Notes: Encrypt Current File`
-- `Encrypted Notes: Decrypt Current File`
 - `Encrypted Notes: Permanently Decrypt Current File`
 
 ## Development
