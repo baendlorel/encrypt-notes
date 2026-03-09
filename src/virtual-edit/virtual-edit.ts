@@ -13,6 +13,7 @@ const mustGetSourceUri = (uri: vscode.Uri) => Note.get(uri).sourceUri;
 export class EncryptNotesProvider implements vscode.FileSystemProvider {
   private readonly changeEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
+  // & Part of the `vscode.FileSystemProvider` interface
   public readonly onDidChangeFile = this.changeEmitter.event;
 
   public watch(
@@ -62,10 +63,7 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
   public async writeFile(
     uri: vscode.Uri,
     content: Uint8Array,
-    options: {
-      readonly create: boolean;
-      readonly overwrite: boolean;
-    },
+    options: { readonly create: boolean; readonly overwrite: boolean },
   ): Promise<void> {
     // Saving the decrypted virtual document enters here instead of writing plaintext to disk directly.
     const state = Note.get(uri);
@@ -114,22 +112,13 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
 
   public async delete(
     uri: vscode.Uri,
-    options: {
-      readonly recursive: boolean;
-      readonly useTrash: boolean;
-    },
+    options: { readonly recursive: boolean; readonly useTrash: boolean },
   ): Promise<void> {
     const sourceUri = mustGetSourceUri(uri);
     await vscode.workspace.fs.delete(sourceUri, options);
   }
 
-  public async rename(
-    oldUri: vscode.Uri,
-    newUri: vscode.Uri,
-    options: {
-      readonly overwrite: boolean;
-    },
-  ): Promise<void> {
+  public async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { readonly overwrite: boolean }): Promise<void> {
     const oldSourceUri = mustGetSourceUri(oldUri);
     const newSourceUri = mustGetSourceUri(newUri);
     await vscode.workspace.fs.rename(oldSourceUri, newSourceUri, options);
