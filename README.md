@@ -1,21 +1,20 @@
 # Encrypted Notes
 
-Encrypt and decrypt text files in VS Code.
+A VS Code extension for keeping local text notes encrypted on disk while editing them in a temporary decrypted view.
 
-## Features
+[简体中文](./README.zh-cn.md)
 
-- Adds lock/unlock buttons to the editor title area (top-right).
-- Adds conditional `Encrypt / Decrypt` CodeLens actions at the first line.
-- Supports encrypting the current file and permanently decrypting decrypted sessions.
-- Provides a permanent decrypt action for decrypted sessions to save plaintext directly.
-- Automatically prompts for password when opening encrypted files.
-- Automatically encrypts decrypted content again when you save.
-- Configurable file extension list (default: `txt`, `md`).
-- Configurable password cache time.
+## How it works
 
-## Encryption Format (v1)
+- Works with local files only.
+- Manages configurable file extensions; defaults: `.txt`, `.md`.
+- `Encrypt Current File` encrypts the active plaintext file, saves it, then opens a decrypted virtual editor for continued editing.
+- When an encrypted file becomes active, the extension asks for a password and opens the decrypted virtual editor.
+- Saving the decrypted virtual editor writes encrypted content back to the original file.
+- `Permanently Decrypt Current File` writes plaintext back to disk and ends the auto-encrypted editing session.
+- Action buttons can appear on the first line (CodeLens, default) or in the editor title.
 
-Encrypted files are stored as:
+## Encrypted file format
 
 ```text
 ENCRYPTED_FILE
@@ -24,29 +23,36 @@ ENCRYPTED_FILE
 ```
 
 - Algorithm: `AES-256-GCM`
-- KDF: `PBKDF2-HMAC-SHA256`
-
-## Settings
-
-```json
-{
-  "encrypted-notes.fileExtensions": ["txt", "md"],
-  "encrypted-notes.actionButtonLocation": "Fisrt Line",
-  "encrypted-notes.passwordKeepMinute": 5
-}
-```
+- KDF: `PBKDF2-SHA256`
+- PBKDF2 iterations: `210000`
 
 ## Commands
 
-- `Encrypted Notes: Encrypt Current File`
-- `Encrypted Notes: Permanently Decrypt Current File`
+- `Encrypted Notes: Encrypt Current File` (`encrypted-notes.encrypt`)
+- `Encrypted Notes: Permanently Decrypt Current File` (`encrypted-notes.decrypt`)
 
-## Development
+> The UI `Decrypt` button / CodeLens runs the permanent decrypt command. Temporary decrypted editing is opened automatically after password entry.
 
-```bash
-pnpm install
-pnpm check
-pnpm build
+## Settings
+
+```jsonc
+{
+  "encrypted-notes.fileExtensions": ["txt", "md"],
+  "encrypted-notes.actionButtonLocation": "Fisrt Line",
+  "encrypted-notes.passwordKeepMinute": 5,
+}
 ```
 
-Press `F5` in VS Code to launch Extension Development Host.
+- `fileExtensions`: accepts values with or without leading dots.
+- `actionButtonLocation`: English values are `"Fisrt Line"` and `"Editor Title"`; Chinese values `"首行"` and `"编辑器右上角"` also work.
+- `passwordKeepMinute`: password cache time in memory. `0` effectively clears the password immediately after it is set.
+
+## Limitations
+
+- Intended for UTF-8 text files.
+- Only local files are supported.
+- Passwords are cached in memory only and are not persisted across VS Code restarts.
+
+## Lisense
+
+MIT License
