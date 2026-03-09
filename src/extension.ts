@@ -22,7 +22,8 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
 };
 
 const confirmPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
-  const state = Note.get(document.uri);
+  const state = Note.getOrFail(document.uri);
+
   const password = await promptPassword(t('prompt.confirmDecrypt'));
   if (!password) {
     return undefined;
@@ -132,7 +133,8 @@ const tryDecrypt = async (document: vscode.TextDocument, showSuccessMessage = tr
     return false;
   }
 
-  const state = Note.get(document.uri);
+  // & Since its encrypted, and it must have a state, otherwise it's weird, just fail.
+  const state = Note.getOrFail(document.uri);
 
   const cachedPassword = state.password;
   if (cachedPassword) {
@@ -211,7 +213,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 };
 
 const decrypt = async (document: vscode.TextDocument): Promise<void> => {
-  const state = Note.get(document.uri);
+  const state = Note.getOrFail(document.uri);
 
   if (Note.isVirtual(document)) {
     const plainText = document.getText();
@@ -313,7 +315,7 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
     return;
   }
 
-  const state = Note.get(document.uri);
+  const state = Note.getOrFail(document.uri);
   state.encrypted = CrypNote.isEncrypted(document);
   if (state.cannotDecrypt) {
     return;

@@ -128,11 +128,22 @@ export namespace Note {
     vsc.showError(`NoteState not found for ${uri.toString()}`);
   };
 
+  export const get = (uri: vscode.Uri): State | undefined => states.get(uri.toString());
+
   /**
-   * ! If **not exist**, create one.
+   * Use this for strictly getting the state.
    */
-  // refactor 这里拆分为一定获取和不一定获取
-  export const get = (uri: vscode.Uri): State => states.get(uri.toString()) ?? add(uri);
+  export const getOrFail = (uri: vscode.Uri): State => {
+    const state = states.get(uri.toString());
+    if (state) {
+      return state;
+    } else {
+      vsc.showError(`NoteState not found for ${uri.toString()}`);
+      throw new Error(`NoteState not found for ${uri.toString()}`);
+    }
+  };
+
+  export const getOrAdd = (uri: vscode.Uri): State => states.get(uri.toString()) ?? add(uri);
 
   // # services
 
