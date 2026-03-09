@@ -47,7 +47,7 @@ const confirmPassword = async (document: vscode.TextDocument): Promise<string | 
 
   try {
     CrypNote.decrypt(encryptedContent, password);
-    return password; // ?? 这里怎么返回密码？
+    return password;
   } catch (error) {
     NoteError.display(error);
     return undefined;
@@ -73,10 +73,10 @@ const updateContextAsync = async (): Promise<void> => {
     const supported =
       document.uri.scheme === EncrytConfig.UriScheme ||
       (document.uri.scheme === 'file' && configs.supports(document.uri));
-    const encrypted = CrypNote.isEncrypted(document); // refactor 也许要看一下实际的文件内容
+    const state = await Note.refresh(document);
     const isSourceFile = document.uri.scheme === 'file';
-    canEncrypt = supported && !encrypted;
-    canDecrypt = supported && ((isSourceFile && encrypted) || Note.isVirtual(document));
+    canEncrypt = supported && !state.encrypted;
+    canDecrypt = supported && ((isSourceFile && state.encrypted) || Note.isVirtual(document));
   }
 
   await vsc.setContext('canEncrypt', canEncrypt);
@@ -159,7 +159,6 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
       return;
     }
 
-    // ?? 这里要直接加密后写入真实文件
     vsc.setStatusBar(t('info.encrypt.savedFromVirtual'));
     return;
   }
