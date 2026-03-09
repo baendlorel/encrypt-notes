@@ -42,18 +42,16 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
     const raw = await vscode.workspace.fs.readFile(state.sourceUri);
     const content = Buffer.from(raw).toString('utf8');
 
-    state.encrypted = CrypNote.isEncryptedText(content);
-    if (!state.encrypted) {
+    if (!(state.encrypted = CrypNote.isEncryptedText(content))) {
       return raw;
     }
 
-    const password = state.password;
-    if (!password) {
+    if (!state.password) {
       throw vscode.FileSystemError.NoPermissions(t('virtual.error.readMissingPassword'));
     }
 
     try {
-      const plainText = CrypNote.decrypt(content, password);
+      const plainText = CrypNote.decrypt(content, state.password);
       return Buffer.from(plainText, 'utf8');
     } catch {
       state.password = undefined;

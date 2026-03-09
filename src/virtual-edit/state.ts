@@ -109,7 +109,6 @@ export namespace Note {
   /**
    * Aim to refresh the state of the source file, not the virtual one.
    */
-  // refactor 我觉得只要在save和open新文件的时候用一下此函数就可以了
   export const refresh = async (document: vscode.TextDocument): Promise<State> => {
     const state = states.get(document.uri.toString()) ?? add(document.uri);
 

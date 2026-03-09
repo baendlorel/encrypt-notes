@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
 
-import { Commands, Consts, EncrytConfig } from './core/consts.js';
+import { Consts, EncrytConfig } from './core/consts.js';
 import { configs } from './core/config.js';
 import { t } from './i18n/index.js';
 import { NoteError } from './lib/errors.js';
 
 import { vsc } from './core/methods.js';
-import { ve } from './virtual-edit/methods.js';
 import { Note } from './virtual-edit/state.js';
 import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
 import { CrypNote } from './lib/crypto.js';
@@ -123,7 +122,7 @@ const openVirtualEditor = async (
     // Open the decrypted virtual document so later saves go through the custom file system provider.
     const virtualDocument = await vscode.workspace.openTextDocument(state.virtualUri);
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
-    await ve.closeTabsForUri(state.sourceUri);
+    await Note.closeRelatedTabs(state.sourceUri);
 
     if (showSuccessMessage) {
       vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
@@ -223,7 +222,6 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 };
 const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   const state = Note.get(document.uri);
-  // refactor 解密，是否存在还没add过的uri就直接解密了？
 
   if (Note.isVirtual(document)) {
     const plainText = document.getText();
@@ -242,7 +240,7 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
       preview: false,
       viewColumn: vscode.window.activeTextEditor?.viewColumn,
     });
-    await ve.closeTabsForUri(document.uri);
+    await Note.closeRelatedTabs(document.uri);
 
     vsc.setStatusBar(t('info.permanentDecrypt.saved'));
     return;
