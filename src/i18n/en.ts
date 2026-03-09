@@ -11,7 +11,7 @@ export const en: typeof zh = {
   'prompt.encryptPassword': 'Enter password to encrypt',
   'prompt.confirmDecrypt': 'Please re-enter password to confirm permanent unlock',
   'prompt.passwordRequired': 'Password cannot be empty.',
-  'error.decrypt.invalidPassword': 'Invalid password. Failed to decrypt.',
+  'error.decrypt.invalidPassword': 'Invalid password or corrupted file. Failed to decrypt.',
   'error.decrypt.invalidFile': 'File format is corrupted or unsupported: {{0}}',
   'error.decrypt.failed': 'Failed to decrypt.',
   'error.decrypt.noVirtualState': 'Decrypted editing view state is invalid. Please close and reopen the file.',

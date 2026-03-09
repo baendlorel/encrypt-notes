@@ -9,7 +9,7 @@ export const zh = {
   'prompt.encryptPassword': '请输入加密密码',
   'prompt.confirmDecrypt': '请再次输入密码以确认永久解锁',
   'prompt.passwordRequired': '密码不能为空。',
-  'error.decrypt.invalidPassword': '密码错误，解密失败。',
+  'error.decrypt.invalidPassword': '密码错误或文件被破坏，解密失败。',
   'error.decrypt.invalidFile': '文件格式损坏或不受支持：{{0}}',
   'error.decrypt.failed': '解密失败。',
   'error.decrypt.noVirtualState': '解密编辑视图状态异常，请关闭后重新打开文件。',
