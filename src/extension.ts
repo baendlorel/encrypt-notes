@@ -387,16 +387,33 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         await updateContextAsync();
       }
     }),
-    vscode.window.tabGroups.onDidChangeTabs((event) => {
-      const text = event.closed
+    vscode.window.tabGroups.onDidChangeTabs(async (event) => {
+      const closedVirtualUris = event.closed
         .map((tab) => tab.input)
-        .filter((input): input is vscode.TabInputText => input instanceof vscode.TabInputText)
-        .map((input) => input.uri.scheme)
-        .join(' *** ');
-      vsc.showInfo(`关闭了标签， schemes: ${text}`);
+        .filter(Note.isVirtualInput)
+        .map((tabInput) => tabInput.uri);
+
+      if (closedVirtualUris.length === 0) {
+        return;
+      }
+
+      const stillOpen = vscode.window.tabGroups.all
+        .flatMap((group) => group.tabs.map((tab) => tab.input))
+        .filter((input) => input instanceof vscode.TabInputText)
+        .map((input) => input.uri.toString());
+
+      for (const uri of closedVirtualUris) {
+        if (stillOpen.includes(uri.toString())) {
+          continue;
+        }
+        if (!Note.remove(uri)) {
+          Note.get(uri)?.clear();
+        }
+      }
+
+      await updateContextAsync();
     }),
     vscode.workspace.onDidCloseTextDocument(async (document) => {
-      vsc.showInfo('关闭：' + document.uri.toString());
       Note.remove(document.uri);
       await updateContextAsync();
     }),

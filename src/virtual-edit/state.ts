@@ -97,10 +97,10 @@ export namespace Note {
     return o;
   };
 
-  export const remove = (uri: vscode.Uri) => {
+  export const remove = (uri: vscode.Uri): boolean => {
     const state = states.get(uri.toString());
     if (!state) {
-      return;
+      return false;
     }
 
     const sourceKey = state.sourceUri.toString();
@@ -111,11 +111,12 @@ export namespace Note {
         return key === sourceKey || key === virtualKey;
       })
     ) {
-      return;
+      return false;
     }
 
     states.delete(sourceKey);
     states.delete(virtualKey);
+    return true;
   };
 
   export const modify = (uri: vscode.Uri, state: Partial<State>) => {
@@ -184,6 +185,8 @@ export namespace Note {
 
   export const isVirtual = (document: vscode.TextDocument) => isVirtualUri(document.uri);
   export const isVirtualUri = (uri: vscode.Uri) => uri.scheme === EncrytConfig.UriScheme;
+  export const isVirtualInput = (input: unknown): input is vscode.TabInputText =>
+    input instanceof vscode.TabInputText && isVirtualUri(input.uri);
 
   export const isActive = (document: vscode.TextDocument) => {
     return vscode.window.activeTextEditor?.document?.uri.toString() === document.uri.toString();
