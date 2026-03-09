@@ -4,6 +4,7 @@ import { t } from '../i18n/index.js';
 
 import { vsc } from '../core/methods.js';
 import { CrypNote } from '../lib/crypto.js';
+import { configs } from 'src/core/config.js';
 
 /**
  * Both sourceUri and virtualUri can get the same `NoteState` object.
@@ -13,8 +14,6 @@ export namespace Note {
     sourceUri: vscode.Uri;
 
     virtualUri: vscode.Uri;
-
-    password: string | undefined = undefined;
 
     decryptedInSession: boolean = false;
 
@@ -28,6 +27,9 @@ export namespace Note {
 
     encrypted: boolean = false;
 
+    private _timer: NodeJS.Timeout | undefined = undefined;
+    private _password: string | undefined = undefined;
+
     constructor(sourceUri: vscode.Uri) {
       this.sourceUri = sourceUri;
       this.virtualUri = sourceUri.with({
@@ -36,6 +38,23 @@ export namespace Note {
         query: encodeURIComponent(sourceUri.toString()),
         fragment: '',
       });
+    }
+
+    set password(password: string | undefined) {
+      this._password = password;
+
+      if (this._timer) {
+        clearTimeout(this._timer);
+        this._timer = undefined;
+      }
+
+      if (password) {
+        this._timer = setTimeout(() => (this.password = undefined), configs.passwordKeepTime);
+      }
+    }
+
+    get password() {
+      return this._password;
     }
 
     /**

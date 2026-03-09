@@ -97,6 +97,12 @@
             "%configuration.actionButtonLocation.editorTitle%"
           ],
           "description": "%configuration.actionButtonLocation.description%"
+        },
+        "encrypted-notes.passwordKeepMinute": {
+          "type": "number",
+          "default": 30,
+          "minimum": 0,
+          "markdownDescription": "%configuration.passwordKeepMinute.description%"
         }
       }
     }
