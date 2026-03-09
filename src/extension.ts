@@ -423,6 +423,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       }
 
       configs.update();
+      vsc.showInfo(t('info.configurationUpdated'));
       await updateContextAsync();
       await tryAutoDecrypt(vscode.window.activeTextEditor?.document);
     }),

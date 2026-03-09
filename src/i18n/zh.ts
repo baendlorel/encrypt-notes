@@ -24,6 +24,7 @@ export const zh = {
   'error.permanentDecrypt.saveFailed': '文件已解密，但自动保存失败，请手动保存。',
   'error.extension.disabled': '扩展当前处于禁用状态，请先开启 encrypted-notes.enabled。',
   'error.noActiveEditor': '没有可操作的活动编辑器。',
+  'info.configurationUpdated': '配置已更新。',
   'info.decrypt.openVirtualSuccess': '解密成功，当前为解密编辑视图，保存时会自动加密写入磁盘。',
   'info.encrypt.savedFromVirtual': '当前为解密编辑视图，内容已按加密格式写入磁盘（仅支持UTF-8）。',
   'info.encrypt.alreadyEncrypted': '当前文件已经是加密状态。',

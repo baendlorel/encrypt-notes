@@ -26,6 +26,7 @@ export const en: typeof zh = {
   'error.permanentDecrypt.saveFailed': 'File was decrypted, but auto save failed. Please save manually.',
   'error.extension.disabled': 'Extension is currently disabled. Please enable encrypted-notes.enabled first.',
   'error.noActiveEditor': 'No active editor is available.',
+  'info.configurationUpdated': 'Configuration updated.',
   'info.decrypt.openVirtualSuccess':
     'Decrypted successfully. You are now in decrypted editing view; save will encrypt back to disk.',
   'info.encrypt.savedFromVirtual':
