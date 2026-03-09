@@ -1,75 +1,76 @@
 import vscode from 'vscode';
 import { EncrytConfig } from '../core/consts.js';
-import { vsc } from '../core/methods.js';
 import { t } from '../i18n/index.js';
+
+import { vsc } from '../core/methods.js';
 import { CrypNote } from '../lib/crypto.js';
-
-const createVirtualPath = (sourceUri: vscode.Uri): string => {
-  const sourcePath = sourceUri.path;
-  const lastSlash = sourcePath.lastIndexOf('/');
-  const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
-  const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
-
-  if (filename.length === 0) {
-    return sourcePath;
-  }
-
-  return `${directoryPath}${t('virtual.displayPrefixDecrypted')}${filename}`;
-};
-
-class NoteState {
-  sourceUri: vscode.Uri;
-
-  virtualUri: vscode.Uri;
-
-  password: string | undefined = undefined;
-
-  decryptedInSession: boolean = false;
-
-  skippedAutoDecrypt: boolean = false;
-
-  /**
-   * Avoid decrypting again
-   * - original name is `decryptPromptInProgress`
-   */
-  locked: boolean = false;
-
-  encrypted: boolean = false;
-
-  constructor(sourceUri: vscode.Uri) {
-    this.sourceUri = sourceUri;
-    this.virtualUri = sourceUri.with({
-      scheme: EncrytConfig.UriScheme,
-      path: createVirtualPath(sourceUri),
-      query: encodeURIComponent(sourceUri.toString()),
-      fragment: '',
-    });
-  }
-
-  /**
-   * When not encrypted, locked or skippedAutoDecrypt
-   */
-  get cannotDecrypt() {
-    return !this.encrypted || this.locked || this.skippedAutoDecrypt;
-  }
-
-  clear() {
-    this.password = undefined;
-    this.decryptedInSession = false;
-    this.skippedAutoDecrypt = false;
-    this.locked = false;
-    this.encrypted = false;
-  }
-}
 
 /**
  * Both sourceUri and virtualUri can get the same `NoteState` object.
  */
 export namespace Note {
-  const states = new Map<string, NoteState>();
+  export class State {
+    sourceUri: vscode.Uri;
 
-  export const add = (sourceUri: vscode.Uri): NoteState => {
-    const o = new NoteState(sourceUri);
+    virtualUri: vscode.Uri;
+
+    password: string | undefined = undefined;
+
+    decryptedInSession: boolean = false;
+
+    skippedAutoDecrypt: boolean = false;
+
+    /**
+     * Avoid decrypting again
+     * - original name is `decryptPromptInProgress`
+     */
+    locked: boolean = false;
+
+    encrypted: boolean = false;
+
+    constructor(sourceUri: vscode.Uri) {
+      this.sourceUri = sourceUri;
+      this.virtualUri = sourceUri.with({
+        scheme: EncrytConfig.UriScheme,
+        path: createVirtualPath(sourceUri),
+        query: encodeURIComponent(sourceUri.toString()),
+        fragment: '',
+      });
+    }
+
+    /**
+     * When not encrypted, locked or skippedAutoDecrypt
+     */
+    get cannotDecrypt() {
+      return !this.encrypted || this.locked || this.skippedAutoDecrypt;
+    }
+
+    clear() {
+      this.password = undefined;
+      this.decryptedInSession = false;
+      this.skippedAutoDecrypt = false;
+      this.locked = false;
+      this.encrypted = false;
+    }
+  }
+
+  const states = new Map<string, State>();
+
+  const createVirtualPath = (sourceUri: vscode.Uri): string => {
+    const sourcePath = sourceUri.path;
+    const lastSlash = sourcePath.lastIndexOf('/');
+    const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
+    const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
+
+    if (filename.length === 0) {
+      return sourcePath;
+    }
+
+    return `${directoryPath}${t('virtual.displayPrefixDecrypted')}${filename}`;
+  };
+
+  export const add = (sourceUri: vscode.Uri): State => {
+    const o = new State(sourceUri);
     states.set(sourceUri.toString(), o);
     states.set(o.virtualUri.toString(), o);
     return o;
@@ -83,7 +84,7 @@ export namespace Note {
     }
   };
 
-  export const modify = (uri: vscode.Uri, state: Partial<NoteState>) => {
+  export const modify = (uri: vscode.Uri, state: Partial<State>) => {
     const o = states.get(uri.toString());
     if (o) {
       Object.assign(o, state);
@@ -94,14 +95,18 @@ export namespace Note {
   /**
    * ! If **not exist**, create one.
    */
-  export const get = (uri: vscode.Uri): NoteState => states.get(uri.toString()) ?? add(uri);
+  export const get = (uri: vscode.Uri): State => states.get(uri.toString()) ?? add(uri);
 
   // # services
+  export const clearAllPasswords = () => {
+    states.forEach((s) => (s.password = undefined));
+  };
+
   /**
    * Aim to refresh the state of the source file, not the virtual one.
    */
   // refactor 我觉得只要在save和open新文件的时候用一下此函数就可以了
-  export const refresh = async (document: vscode.TextDocument): Promise<NoteState> => {
+  export const refresh = async (document: vscode.TextDocument): Promise<State> => {
     const state = states.get(document.uri.toString()) ?? add(document.uri);
 
     if (isVirtualUri(document.uri)) {

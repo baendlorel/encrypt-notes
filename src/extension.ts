@@ -10,58 +10,7 @@ import { ve } from './virtual-edit/methods.js';
 import { Note } from './virtual-edit/state.js';
 import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
 import { CrypNote } from './lib/crypto.js';
-
-const passwordCache = new Map<string, string>();
-
-const codeLensChangeEmitter = new vscode.EventEmitter<void>();
-
-class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
-  public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-    if (!configs.buttonOnFirstLine) {
-      return [];
-    }
-
-    const sourceUri = ve.getSourceUri(document.uri);
-    if (!configs.supports(sourceUri)) {
-      return [];
-    }
-
-    const isSourceFile = document.uri.scheme === 'file';
-    // todo 如果文件在外部变化，可能这里也要侦听
-    const encryptedOnDisk = getEncryptedOnDiskState(document); // refactor 这里读取文件加上
-    const canEncrypt = isSourceFile && !encryptedOnDisk;
-    const canDecrypt = (isSourceFile && encryptedOnDisk) || Note.isVirtual(document);
-
-    if (!canEncrypt && !canDecrypt) {
-      return [];
-    }
-
-    const range = new vscode.Range(0, 0, 0, 0);
-    const lenses: vscode.CodeLens[] = [];
-
-    if (canEncrypt) {
-      lenses.push(
-        new vscode.CodeLens(range, {
-          title: t('codelens.encrypt'),
-          command: Commands.Encrypt,
-          arguments: [document.uri],
-        }),
-      );
-    }
-
-    if (canDecrypt) {
-      lenses.push(
-        new vscode.CodeLens(range, {
-          title: t('codelens.decrypt'),
-          command: Commands.Decrypt,
-          arguments: [document.uri],
-        }),
-      );
-    }
-
-    return lenses;
-  }
-}
+import { EncryptionCodeLensProvider } from './core/code-lens.provider.js';
 
 const promptPassword = async (prompt: string): Promise<string | undefined> => {
   const password = await vscode.window.showInputBox({
@@ -144,17 +93,16 @@ const updateContextAsync = async (): Promise<void> => {
   await vsc.setContext('canEncrypt', canEncrypt);
   await vsc.setContext('canDecrypt', canDecrypt);
 
-  codeLensChangeEmitter.fire();
+  EncryptionCodeLensProvider.emitter.fire();
 };
 
 const openVirtualEditor = async (
   sourceDocument: vscode.TextDocument,
+  state: Note.State,
   password: string,
   showSuccessMessage: boolean,
 ): Promise<boolean> => {
-  const note = Note.get(sourceDocument.uri);
-
-  if (note?.sourceUri.scheme !== 'file') {
+  if (state?.sourceUri.scheme !== 'file') {
     vsc.showError(t('error.onlyLocalFile'));
     return false;
   }
@@ -167,15 +115,15 @@ const openVirtualEditor = async (
   }
 
   try {
-    note.password = password;
-    note.decryptedInSession = true;
-    note.skippedAutoDecrypt = false;
-    note.encrypted = true;
+    state.password = password;
+    state.decryptedInSession = true;
+    state.skippedAutoDecrypt = false;
+    state.encrypted = true;
 
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
-    const virtualDocument = await vscode.workspace.openTextDocument(note.virtualUri);
+    const virtualDocument = await vscode.workspace.openTextDocument(state.virtualUri);
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
-    await ve.closeTabsForUri(note.sourceUri);
+    await ve.closeTabsForUri(state.sourceUri);
 
     if (showSuccessMessage) {
       vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
@@ -189,25 +137,27 @@ const openVirtualEditor = async (
 };
 
 const tryDecrypt = async (document: vscode.TextDocument, showSuccessMessage = true): Promise<boolean> => {
-  const sourceKey = ve.getSourceUriKey(document.uri);
-
   if (!CrypNote.isEncrypted(document)) {
     return false;
   }
 
-  const cachedPassword = passwordCache.get(sourceKey);
-  if (cachedPassword && (await openVirtualEditor(document, cachedPassword, showSuccessMessage))) {
-    return true;
+  const state = Note.get(document.uri);
+
+  const cachedPassword = state.password;
+  if (cachedPassword) {
+    const opened = await openVirtualEditor(document, state, cachedPassword, showSuccessMessage);
+    if (opened) {
+      return true;
+    }
   }
 
-  passwordCache.delete(sourceKey);
-
+  state.password = undefined;
   const password = await promptPassword(t('prompt.decryptPassword'));
   if (!password) {
     return false;
   }
 
-  return openVirtualEditor(document, password, showSuccessMessage);
+  return openVirtualEditor(document, state, password, showSuccessMessage);
 };
 
 const encrypt = async (document: vscode.TextDocument): Promise<void> => {
@@ -225,7 +175,9 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
     return;
   }
 
-  if (!configs.supports(document.uri)) {
+  const state = Note.add(document.uri);
+
+  if (!configs.supports(state.sourceUri)) {
     vsc.showError(t('error.encrypt.unsupportedExtension'));
     return;
   }
@@ -235,7 +187,6 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
     return;
   }
 
-  const state = Note.add(document.uri);
   let password = state.password;
   if (!password) {
     password = await promptPassword(t('prompt.encryptPassword'));
@@ -265,7 +216,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   state.skippedAutoDecrypt = false;
 
   const encryptedDocument = await vscode.workspace.openTextDocument(state.sourceUri);
-  const opened = await openVirtualEditor(encryptedDocument, password, false);
+  const opened = await openVirtualEditor(encryptedDocument, state, password, false);
   if (opened) {
     vsc.setStatusBar(t('info.encrypt.savedAndContinueDecrypted'));
   }
@@ -406,7 +357,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
   configs.update();
 
   context.subscriptions.push(
-    codeLensChangeEmitter,
+    EncryptionCodeLensProvider.emitter,
     vscode.workspace.registerFileSystemProvider(EncrytConfig.UriScheme, new EncryptNotesProvider(), {
       isCaseSensitive: true,
     }),
@@ -424,12 +375,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       await updateContextAsync();
     }),
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      // refactor 切换活动的文本编辑器的时候触发
       if (editor) {
         await Note.refresh(editor.document);
         await tryAutoDecrypt(editor.document);
       }
 
+      Note.clearAllPasswords();
       await updateContextAsync();
     }),
     vscode.window.tabGroups.onDidChangeTabs(async (event) => {
