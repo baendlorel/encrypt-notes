@@ -91,7 +91,10 @@ export namespace Note {
     vsc.showError(`NoteState not found for ${uri.toString()}`);
   };
 
-  export const get = (uri: vscode.Uri): NoteState | undefined => states.get(uri.toString());
+  /**
+   * ! If **not exist**, create one.
+   */
+  export const get = (uri: vscode.Uri): NoteState => states.get(uri.toString()) ?? add(uri);
 
   // # services
   /**
@@ -119,11 +122,6 @@ export namespace Note {
   };
 
   export const closeRelatedTabs = async (uri: vscode.Uri) => {
-    const state = states.get(uri.toString());
-    if (!state) {
-      return;
-    }
-
     const tabs = vscode.window.tabGroups.all
       .flatMap((group) => group.tabs)
       .filter((tab) => tab.input instanceof vscode.TabInputText && states.has(tab.input.uri.toString()));

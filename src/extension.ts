@@ -12,9 +12,6 @@ import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
 import { CrypNote } from './lib/crypto.js';
 
 const passwordCache = new Map<string, string>();
-const skippedAutoDecrypt = new Set<string>();
-const decryptPromptInProgress = new Set<string>();
-const encryptedOnDiskState = new Map<string, boolean>();
 
 const codeLensChangeEmitter = new vscode.EventEmitter<void>();
 
@@ -81,16 +78,18 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
   return password;
 };
 
-const confirmDecrypt = async (document: vscode.TextDocument): Promise<string | undefined> => {
+/**
+ * Get password
+ */
+const confirmDecryptPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
+  const state = Note.get(document.uri);
   const password = await promptPassword(t('prompt.confirmDecrypt'));
   if (!password) {
     return undefined;
   }
 
-  const sourceUri = ve.getSourceUri(document.uri);
-  const sourceKey = ve.getUriKey(sourceUri);
-  const cachedPassword = passwordCache.get(sourceKey);
-
+  // refactor 对于activechange，要拆掉所有passwordcache，重新输入密码
+  const cachedPassword = state.password;
   if (cachedPassword && cachedPassword === password) {
     return password;
   }
@@ -98,7 +97,7 @@ const confirmDecrypt = async (document: vscode.TextDocument): Promise<string | u
   let encryptedContent: string;
   if (Note.isVirtual(document)) {
     try {
-      const sourceRaw = await vscode.workspace.fs.readFile(sourceUri);
+      const sourceRaw = await vscode.workspace.fs.readFile(state.sourceUri);
       encryptedContent = Buffer.from(sourceRaw).toString('utf8');
     } catch {
       vsc.showError(t('error.decrypt.failed'));
@@ -274,10 +273,6 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   const state = Note.get(document.uri);
   // refactor 解密，是否存在还没add过的uri就直接解密了？
-  if (!state) {
-    vsc.showError(t('error.decrypt.noVirtualState'));
-    return;
-  }
 
   if (Note.isVirtual(document)) {
     const plainText = document.getText();
@@ -362,12 +357,12 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
       return;
     }
 
-    const confirmedPassword = await confirmDecrypt(document);
-    if (!confirmedPassword) {
+    const password = await confirmDecryptPassword(document);
+    if (!password) {
       return;
     }
 
-    Note.modify(document.uri, { password: confirmedPassword });
+    Note.modify(document.uri, { password });
     await decrypt(document);
     await updateContextAsync();
     return;
@@ -381,10 +376,6 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
 
   // refactor 尝试利用notes缩减，是否存在还没add就来try的？
   const state = Note.get(document.uri);
-  if (!state) {
-    vsc.showError(t('error.decrypt.noVirtualState'));
-    return;
-  }
 
   state.encrypted = CrypNote.isEncrypted(document);
   if (state.cannotDecrypt) {
@@ -456,13 +447,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     }),
     // refactor 这里可能是控制自动保存的
     vscode.workspace.onDidSaveTextDocument(async (document) => {
-      await Note.refresh(document);
+      const state = await Note.refresh(document);
 
-      const state = Note.get(document.uri);
-      if (!state) {
-        vsc.showError(t('error.decrypt.noVirtualState'));
-        return;
-      }
       if (Note.isVirtual(document)) {
         state.encrypted = false;
         state.decryptedInSession = true;

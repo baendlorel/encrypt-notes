@@ -1,49 +1,17 @@
 import vscode from 'vscode';
-import type { DecryptTextFn, EncryptTextFn, IsEncryptedTextFn } from '../core/types.js';
 import { Consts } from '../core/consts.js';
-
 import { t } from '../i18n/index.js';
-import { ve } from '../virtual-edit/methods.js';
+import { CrypNote } from '../lib/crypto.js';
+
+import { Note } from './state.js';
 
 const hasUtf8Bom = (content: Uint8Array): boolean =>
   content.length >= 3 && content[0] === 0xef && content[1] === 0xbb && content[2] === 0xbf;
 
-interface VirtualEditProviderDeps {
-  passwordCache: Map<string, string>;
-  encryptedOnDiskState: Map<string, boolean>;
-  decryptedSession: Set<string>;
-  decryptText: DecryptTextFn;
-  encryptText: EncryptTextFn;
-  isEncryptedText: IsEncryptedTextFn;
-}
-
-const getRequiredSourceUriFromVirtualUri = (uri: vscode.Uri): vscode.Uri => {
-  const sourceUri = ve.toSourceUri(uri);
-  if (!sourceUri) {
-    throw vscode.FileSystemError.FileNotFound(uri);
-  }
-
-  return sourceUri;
-};
+const mustGetSourceUri = (uri: vscode.Uri) => Note.get(uri).sourceUri;
 
 export class EncryptNotesProvider implements vscode.FileSystemProvider {
   private readonly changeEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
-
-  private readonly passwordCache: Map<string, string>;
-  private readonly encryptedOnDiskState: Map<string, boolean>;
-  private readonly decryptedSession: Set<string>;
-  private readonly decryptText: DecryptTextFn;
-  private readonly encryptText: EncryptTextFn;
-  private readonly isEncryptedText: IsEncryptedTextFn;
-
-  public constructor(deps: VirtualEditProviderDeps) {
-    this.passwordCache = deps.passwordCache;
-    this.encryptedOnDiskState = deps.encryptedOnDiskState;
-    this.decryptedSession = deps.decryptedSession;
-    this.decryptText = deps.decryptText;
-    this.encryptText = deps.encryptText;
-    this.isEncryptedText = deps.isEncryptedText;
-  }
 
   public readonly onDidChangeFile = this.changeEmitter.event;
 
@@ -55,43 +23,40 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
   }
 
   public async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
+    const sourceUri = mustGetSourceUri(uri);
     return vscode.workspace.fs.stat(sourceUri);
   }
 
   public async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
+    const sourceUri = mustGetSourceUri(uri);
     return vscode.workspace.fs.readDirectory(sourceUri);
   }
 
   public async createDirectory(uri: vscode.Uri): Promise<void> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
+    const sourceUri = mustGetSourceUri(uri);
     await vscode.workspace.fs.createDirectory(sourceUri);
   }
 
   public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    const sourceKey = ve.getUriKey(sourceUri);
-    const raw = await vscode.workspace.fs.readFile(sourceUri);
+    const state = Note.get(uri);
+    const raw = await vscode.workspace.fs.readFile(state.sourceUri);
     const content = Buffer.from(raw).toString('utf8');
 
-    const encrypted = this.isEncryptedText(content);
-    this.encryptedOnDiskState.set(sourceKey, encrypted);
-
-    if (!encrypted) {
+    state.encrypted = CrypNote.isEncryptedText(content);
+    if (!state.encrypted) {
       return raw;
     }
 
-    const password = this.passwordCache.get(sourceKey);
+    const password = state.password;
     if (!password) {
       throw vscode.FileSystemError.NoPermissions(t('virtual.error.readMissingPassword'));
     }
 
     try {
-      const plainText = this.decryptText(content, password);
+      const plainText = CrypNote.decrypt(content, password);
       return Buffer.from(plainText, 'utf8');
     } catch {
-      this.passwordCache.delete(sourceKey);
+      state.password = undefined;
       throw vscode.FileSystemError.NoPermissions(t('virtual.error.readInvalidPassword'));
     }
   }
@@ -104,46 +69,44 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
       readonly overwrite: boolean;
     },
   ): Promise<void> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
-    const sourceKey = ve.getUriKey(sourceUri);
-    const password = this.passwordCache.get(sourceKey);
+    const state = Note.get(uri);
 
-    if (!password) {
+    if (!state.password) {
       throw vscode.FileSystemError.NoPermissions(t('virtual.error.writeMissingPassword'));
     }
 
     let sourceExists = true;
     try {
-      await vscode.workspace.fs.stat(sourceUri);
+      await vscode.workspace.fs.stat(state.sourceUri);
     } catch {
       sourceExists = false;
     }
 
     if (!sourceExists && !options.create) {
-      throw vscode.FileSystemError.FileNotFound(sourceUri);
+      throw vscode.FileSystemError.FileNotFound(state.sourceUri);
     }
 
     if (sourceExists && !options.overwrite) {
-      throw vscode.FileSystemError.FileExists(sourceUri);
+      throw vscode.FileSystemError.FileExists(state.sourceUri);
     }
 
     const plainText = Buffer.from(content).toString('utf8');
-    const encryptedContent = this.encryptText(plainText, password);
+    const encryptedContent = CrypNote.encrypt(plainText, state.password);
     const encryptedRaw = Buffer.from(encryptedContent, 'utf8');
     let nextRaw = encryptedRaw;
 
     if (sourceExists) {
       try {
-        const sourceRaw = await vscode.workspace.fs.readFile(sourceUri);
+        const sourceRaw = await vscode.workspace.fs.readFile(state.sourceUri);
         if (hasUtf8Bom(sourceRaw)) {
           nextRaw = Buffer.concat([Consts.UTF8_BOM_BUFFER, encryptedRaw]);
         }
       } catch {}
     }
 
-    await vscode.workspace.fs.writeFile(sourceUri, nextRaw);
-    this.encryptedOnDiskState.set(sourceKey, true);
-    this.decryptedSession.add(sourceKey);
+    await vscode.workspace.fs.writeFile(state.sourceUri, nextRaw);
+    state.encrypted = true;
+    state.decryptedInSession = true;
 
     this.changeEmitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
   }
@@ -155,7 +118,7 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
       readonly useTrash: boolean;
     },
   ): Promise<void> {
-    const sourceUri = getRequiredSourceUriFromVirtualUri(uri);
+    const sourceUri = mustGetSourceUri(uri);
     await vscode.workspace.fs.delete(sourceUri, options);
   }
 
@@ -166,8 +129,8 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
       readonly overwrite: boolean;
     },
   ): Promise<void> {
-    const oldSourceUri = getRequiredSourceUriFromVirtualUri(oldUri);
-    const newSourceUri = getRequiredSourceUriFromVirtualUri(newUri);
+    const oldSourceUri = mustGetSourceUri(oldUri);
+    const newSourceUri = mustGetSourceUri(newUri);
     await vscode.workspace.fs.rename(oldSourceUri, newSourceUri, options);
   }
 }
