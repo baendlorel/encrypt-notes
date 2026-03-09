@@ -45,6 +45,10 @@ export namespace Note {
       return !this.encrypted || this.locked || this.skippedAutoDecrypt;
     }
 
+    get isSourceActive() {
+      return vscode.window.activeTextEditor?.document?.uri.toString() === this.sourceUri.toString();
+    }
+
     clear() {
       this.password = undefined;
       this.decryptedInSession = false;

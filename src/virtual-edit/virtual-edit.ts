@@ -69,6 +69,7 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
       readonly overwrite: boolean;
     },
   ): Promise<void> {
+    // Saving the decrypted virtual document enters here instead of writing plaintext to disk directly.
     const state = Note.get(uri);
 
     if (!state.password) {
@@ -90,6 +91,7 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
       throw vscode.FileSystemError.FileExists(state.sourceUri);
     }
 
+    // Convert the editor plaintext back to encrypted text with the cached password.
     const plainText = Buffer.from(content).toString('utf8');
     const encryptedContent = CrypNote.encrypt(plainText, state.password);
     const encryptedRaw = Buffer.from(encryptedContent, 'utf8');
@@ -104,6 +106,7 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
       } catch {}
     }
 
+    // Persist the encrypted bytes to the original source file on disk.
     await vscode.workspace.fs.writeFile(state.sourceUri, nextRaw);
     state.encrypted = true;
     state.decryptedInSession = true;

@@ -30,16 +30,14 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
 /**
  * Get password
  */
-const confirmDecryptPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
+const confirmPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
   const state = Note.get(document.uri);
   const password = await promptPassword(t('prompt.confirmDecrypt'));
   if (!password) {
     return undefined;
   }
 
-  // refactor 对于activechange，要拆掉所有passwordcache，重新输入密码
-  const cachedPassword = state.password;
-  if (cachedPassword && cachedPassword === password) {
+  if (state.password === password) {
     return password;
   }
 
@@ -102,7 +100,7 @@ const openVirtualEditor = async (
   password: string,
   showSuccessMessage: boolean,
 ): Promise<boolean> => {
-  if (state?.sourceUri.scheme !== 'file') {
+  if (state.sourceUri.scheme !== 'file') {
     vsc.showError(t('error.onlyLocalFile'));
     return false;
   }
@@ -121,6 +119,8 @@ const openVirtualEditor = async (
     state.encrypted = true;
 
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
+
+    // Open the decrypted virtual document so later saves go through the custom file system provider.
     const virtualDocument = await vscode.workspace.openTextDocument(state.virtualUri);
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
     await ve.closeTabsForUri(state.sourceUri);
@@ -308,7 +308,7 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
       return;
     }
 
-    const password = await confirmDecryptPassword(document);
+    const password = await confirmPassword(document);
     if (!password) {
       return;
     }
@@ -325,23 +325,19 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
     return;
   }
 
-  // refactor 尝试利用notes缩减，是否存在还没add就来try的？
   const state = Note.get(document.uri);
-
   state.encrypted = CrypNote.isEncrypted(document);
   if (state.cannotDecrypt) {
     return;
   }
 
-  const activeDocument = vscode.window.activeTextEditor?.document;
-  if (!activeDocument || activeDocument.uri.toString() !== state.sourceUri.toString()) {
+  if (!state.isSourceActive) {
     return;
   }
 
   state.locked = true;
 
   try {
-    // refactor 这里会打开virtual editor
     const success = await tryDecrypt(document, false);
     if (!success) {
       state.skippedAutoDecrypt = true;
@@ -396,11 +392,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         updateContextAsync();
       }
     }),
-    // refactor 这里可能是控制自动保存的
     vscode.workspace.onDidSaveTextDocument(async (document) => {
       const state = await Note.refresh(document);
 
       if (Note.isVirtual(document)) {
+        // After the virtual document save completes, refresh UI state to keep the editor in decrypted mode.
         state.encrypted = false;
         state.decryptedInSession = true;
         vscode.window.setStatusBarMessage(t('status.savedEncrypted'), 1600);
