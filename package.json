@@ -100,7 +100,7 @@
         },
         "encrypted-notes.passwordKeepMinute": {
           "type": "number",
-          "default": 30,
+          "default": 5,
           "minimum": 0,
           "markdownDescription": "%configuration.passwordKeepMinute.description%"
         }

@@ -10,22 +10,35 @@ import { configs } from 'src/core/config.js';
  * Both sourceUri and virtualUri can get the same `NoteState` object.
  */
 export namespace Note {
+  const createVirtualPath = (sourceUri: vscode.Uri): string => {
+    const sourcePath = sourceUri.path;
+    const lastSlash = sourcePath.lastIndexOf('/');
+    const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
+    const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
+
+    if (filename.length === 0) {
+      return sourcePath;
+    }
+
+    return `${directoryPath}${t('virtual.displayPrefixDecrypted')}${filename}`;
+  };
+
   export class State {
-    sourceUri: vscode.Uri;
+    public sourceUri: vscode.Uri;
 
-    virtualUri: vscode.Uri;
+    public virtualUri: vscode.Uri;
 
-    decryptedInSession: boolean = false;
+    public decryptedInSession: boolean = false;
 
-    skippedAutoDecrypt: boolean = false;
+    public skippedAutoDecrypt: boolean = false;
 
     /**
      * Avoid decrypting again
      * - original name is `decryptPromptInProgress`
      */
-    locked: boolean = false;
+    public locked: boolean = false;
 
-    encrypted: boolean = false;
+    public encrypted: boolean = false;
 
     private _timer: NodeJS.Timeout | undefined = undefined;
     private _password: string | undefined = undefined;
@@ -78,20 +91,6 @@ export namespace Note {
   }
 
   const states = new Map<string, State>();
-
-  const createVirtualPath = (sourceUri: vscode.Uri): string => {
-    const sourcePath = sourceUri.path;
-    const lastSlash = sourcePath.lastIndexOf('/');
-    const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
-    const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
-
-    if (filename.length === 0) {
-      return sourcePath;
-    }
-
-    return `${directoryPath}${t('virtual.displayPrefixDecrypted')}${filename}`;
-  };
-
   export const add = (sourceUri: vscode.Uri): State => {
     const o = new State(sourceUri);
     states.set(sourceUri.toString(), o);
@@ -136,9 +135,6 @@ export namespace Note {
   export const get = (uri: vscode.Uri): State => states.get(uri.toString()) ?? add(uri);
 
   // # services
-  export const clearAllPasswords = () => {
-    states.forEach((s) => (s.password = undefined));
-  };
 
   /**
    * Aim to refresh the state of the source file, not the virtual one.

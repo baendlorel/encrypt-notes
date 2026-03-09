@@ -29,7 +29,7 @@ export type ContextKey = 'canEncrypt' | 'canDecrypt' | 'buttonOnEditorTitle';
 export namespace Configs {
   export const DefaultFileExtensions = ['.txt', '.md'];
   export const DefaultButtonLocation: ButtonLocation = ButtonLocation.FirstLine;
-  export const DefaultPasswordKeepMinute = 30;
+  export const DefaultPasswordKeepMinute = 5;
   export const enum ButtonLocation {
     FirstLine,
     EditorTitle,
