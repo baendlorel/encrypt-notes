@@ -18,17 +18,9 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
     ignoreFocusOut: true,
     validateInput: (value) => (value.length === 0 ? t('prompt.passwordRequired') : undefined),
   });
-
-  if (password === undefined || password.length === 0) {
-    return undefined;
-  }
-
-  return password;
+  return password ? password : undefined;
 };
 
-/**
- * Get password
- */
 const confirmPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
   const state = Note.get(document.uri);
   const password = await promptPassword(t('prompt.confirmDecrypt'));
@@ -167,10 +159,8 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
       return;
     }
 
-    const state = Note.get(document.uri);
-    // refactor 这里要直接加密后写入真实文件
+    // ?? 这里要直接加密后写入真实文件
     vsc.setStatusBar(t('info.encrypt.savedFromVirtual'));
-
     return;
   }
 
@@ -220,6 +210,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
     vsc.setStatusBar(t('info.encrypt.savedAndContinueDecrypted'));
   }
 };
+
 const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   const state = Note.get(document.uri);
 
