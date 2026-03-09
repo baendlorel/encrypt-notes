@@ -6,6 +6,7 @@ artifact
 .artifact
 assets/example.png
 .oxlintrc.json
+assets/logo256.png
 
 pnpm-lock.yaml
 eslint.config.*

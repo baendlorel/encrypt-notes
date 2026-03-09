@@ -24,6 +24,9 @@
     "notes",
     "text"
   ],
+  "repository": {
+    "url": "https://github.com/baendlorel/encrypted-notes"
+  },
   "license": "MIT",
   "icon": "assets/logo.png",
   "galleryBanner": {
@@ -109,7 +112,7 @@
   },
   "scripts": {
     "test-build": "pnpm build",
-    "build": "rimraf out && tsc -p tsconfig.build.json",
+    "build": "rimraf out && rollup -c",
     "watch": "tsc -watch -p tsconfig.build.json",
     "check": "tsc -p tsconfig.build.json --noEmit",
     "lines": "tsx ./scripts/lines.ts",
@@ -118,11 +121,20 @@
     "publish": "pnpm build && vsce publish"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@rollup/plugin-typescript": "^12.3.0",
     "@types/node": "^24.7.0",
     "@types/vscode": "^1.74.0",
     "@vscode/vsce": "^3.0.0",
     "oxlint": "^1.22.0",
     "rimraf": "^6.0.1",
+    "rollup": "^4.59.0",
+    "rollup-plugin-conditional-compilation": "^2.1.2",
+    "rollup-plugin-const-enum": "^1.1.5",
+    "rollup-plugin-func-macro": "^1.2.2",
+    "tslib": "^2.8.1",
     "typescript": "^5.9.3"
   }
 }

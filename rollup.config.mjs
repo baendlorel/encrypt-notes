@@ -1,20 +1,12 @@
 // @ts-check
-import fs from 'node:fs';
-import path from 'node:path';
-
 // plugins
 import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import alias from '@rollup/plugin-alias';
 import terser from '@rollup/plugin-terser';
-import replace from '@rollup/plugin-replace';
 import funcMacro from 'rollup-plugin-func-macro';
 import constEnum from 'rollup-plugin-const-enum';
 import conditional from 'rollup-plugin-conditional-compilation';
-
-// custom plugins
-import { replaceLiteralOpts, replaceOpts } from './.scripts/replace.mjs';
 
 // # common options
 
@@ -22,24 +14,6 @@ import { replaceLiteralOpts, replaceOpts } from './.scripts/replace.mjs';
  * build config
  */
 const tsconfig = './tsconfig.build.json';
-
-/**
- * @type {import('@rollup/plugin-alias').RollupAliasOptions}
- */
-const aliasOpts = {
-  entries: [{ find: /^@\//, replacement: path.resolve(import.meta.dirname, 'src') + '/' }],
-};
-
-const rawImport = () => ({
-  name: 'raw-import',
-  load(id) {
-    if (!id.endsWith('.html')) {
-      return null;
-    }
-
-    return `export default ${JSON.stringify(fs.readFileSync(id, 'utf8'))};`;
-  },
-});
 
 // # main options
 
@@ -56,7 +30,6 @@ const options = [
         file: 'out/extension.js',
         format: 'cjs',
         sourcemap: IS_DEV,
-        name: 'Colorful Markdown',
         globals: {
           vscode: 'vscode',
         },
@@ -64,16 +37,8 @@ const options = [
     ],
 
     plugins: [
-      alias(aliasOpts),
-      replace({
-        preventAssignment: false,
-        delimiters: ['', ''],
-        values: replaceLiteralOpts,
-      }),
-      replace(replaceOpts),
       funcMacro(),
       constEnum(),
-      rawImport(),
       resolve(),
       commonjs(),
       typescript({ tsconfig, removeComments: false }),
