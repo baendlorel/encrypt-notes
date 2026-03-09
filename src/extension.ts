@@ -387,7 +387,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         await updateContextAsync();
       }
     }),
+    vscode.window.tabGroups.onDidChangeTabs((event) => {
+      const text = event.closed
+        .map((tab) => tab.input)
+        .filter((input): input is vscode.TabInputText => input instanceof vscode.TabInputText)
+        .map((input) => input.uri.scheme)
+        .join(' *** ');
+      vsc.showInfo(`关闭了标签， schemes: ${text}`);
+    }),
     vscode.workspace.onDidCloseTextDocument(async (document) => {
+      vsc.showInfo('关闭：' + document.uri.toString());
       Note.remove(document.uri);
       await updateContextAsync();
     }),

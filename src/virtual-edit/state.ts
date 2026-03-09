@@ -1,10 +1,9 @@
 import vscode from 'vscode';
 import { EncrytConfig } from '../core/consts.js';
-import { t } from '../i18n/index.js';
-
+import { configs } from '../core/config.js';
 import { vsc } from '../core/methods.js';
+import { t } from '../i18n/index.js';
 import { CrypNote } from '../lib/crypto.js';
-import { configs } from 'src/core/config.js';
 
 /**
  * Both sourceUri and virtualUri can get the same `NoteState` object.
