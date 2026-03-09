@@ -165,7 +165,7 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
     return;
   }
 
-  const state = Note.add(document.uri);
+  const state = Note.getOrAdd(document.uri);
 
   if (!configs.supports(state.sourceUri)) {
     vsc.showError(t('error.encrypt.unsupportedExtension'));

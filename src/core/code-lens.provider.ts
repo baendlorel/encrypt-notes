@@ -13,10 +13,10 @@ export class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
       return [];
     }
 
-    if (!configs.supports(document.uri)) {
+    const state = Note.getOrAdd(document.uri);
+    if (!configs.supports(state.sourceUri)) {
       return [];
     }
-    const state = Note.getOrFail(document.uri);
 
     const isSourceFile = document.uri.scheme === 'file';
     const canEncrypt = isSourceFile && !state.encrypted;
