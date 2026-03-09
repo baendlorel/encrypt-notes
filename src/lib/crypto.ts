@@ -82,6 +82,9 @@ export namespace CrypNote {
     const key = deriveKey(password, salt, EncrytConfig.Pbkdf2Iterations);
 
     const cipher = crypto.createCipheriv(EncrytConfig.Algorithm, key, iv);
+    // ! Must be down before getAuthTag()
+    const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]).toString('base64');
+
     const tag = cipher.getAuthTag();
     const header: EncryptedHeader = {
       v: 1,
@@ -92,8 +95,6 @@ export namespace CrypNote {
       iv: iv.toString('base64'),
       tag: tag.toString('base64'),
     };
-
-    const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]).toString('base64');
 
     return [EncrytConfig.Flag, JSON.stringify(header), ciphertext].join('\n');
   };
