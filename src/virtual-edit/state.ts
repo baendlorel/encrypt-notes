@@ -43,6 +43,10 @@ export namespace Note {
     private _password: string | undefined = undefined;
 
     constructor(sourceUri: vscode.Uri) {
+      if (sourceUri.scheme === EncrytConfig.UriScheme) {
+        sourceUri = vscode.Uri.parse(decodeURIComponent(sourceUri.query));
+      }
+
       this.sourceUri = sourceUri;
       this.virtualUri = sourceUri.with({
         scheme: EncrytConfig.UriScheme,
@@ -90,11 +94,26 @@ export namespace Note {
   }
 
   const states = new Map<string, State>();
-  export const add = (sourceUri: vscode.Uri): State => {
-    const o = new State(sourceUri);
-    states.set(sourceUri.toString(), o);
-    states.set(o.virtualUri.toString(), o);
-    return o;
+  export const add = (uri: vscode.Uri): State => {
+    const sourceUri = uri.scheme === EncrytConfig.UriScheme ? vscode.Uri.parse(decodeURIComponent(uri.query)) : uri;
+    const sourceKey = sourceUri.toString();
+    const existing = states.get(uri.toString()) ?? states.get(sourceKey);
+    if (existing) {
+      states.set(sourceKey, existing);
+      states.set(existing.virtualUri.toString(), existing);
+      if (uri.toString() !== sourceKey && uri.toString() !== existing.virtualUri.toString()) {
+        states.set(uri.toString(), existing);
+      }
+      return existing;
+    }
+
+    const state = new State(sourceUri);
+    states.set(sourceKey, state);
+    states.set(state.virtualUri.toString(), state);
+    if (uri.toString() !== sourceKey && uri.toString() !== state.virtualUri.toString()) {
+      states.set(uri.toString(), state);
+    }
+    return state;
   };
 
   export const remove = (uri: vscode.Uri): boolean => {
@@ -103,19 +122,12 @@ export namespace Note {
       return false;
     }
 
-    const sourceKey = state.sourceUri.toString();
-    const virtualKey = state.virtualUri.toString();
-    if (
-      vscode.workspace.textDocuments.some((document) => {
-        const key = document.uri.toString();
-        return key === sourceKey || key === virtualKey;
-      })
-    ) {
+    const keys = [...states.entries()].flatMap(([key, value]) => (value === state ? [key] : []));
+    if (vscode.workspace.textDocuments.some((document) => keys.includes(document.uri.toString()))) {
       return false;
     }
 
-    states.delete(sourceKey);
-    states.delete(virtualKey);
+    keys.forEach((key) => states.delete(key));
     return true;
   };
 
@@ -151,7 +163,7 @@ export namespace Note {
    * Aim to refresh the state of the source file, not the virtual one.
    */
   export const refresh = async (document: vscode.TextDocument): Promise<State> => {
-    const state = states.get(document.uri.toString()) ?? add(document.uri);
+    const state = getOrAdd(document.uri);
 
     if (isVirtualUri(document.uri)) {
       return state;

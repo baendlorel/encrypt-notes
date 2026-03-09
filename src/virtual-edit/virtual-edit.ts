@@ -8,7 +8,7 @@ import { Note } from './state.js';
 const hasUtf8Bom = (content: Uint8Array): boolean =>
   content.length >= 3 && content[0] === 0xef && content[1] === 0xbb && content[2] === 0xbf;
 
-const getSourceUriOrFail = (uri: vscode.Uri): vscode.Uri => Note.getOrFail(uri).sourceUri;
+const getSourceUri = (uri: vscode.Uri): vscode.Uri => Note.getOrAdd(uri).sourceUri;
 
 export class EncryptNotesProvider implements vscode.FileSystemProvider {
   private readonly changeEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
@@ -24,22 +24,22 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
   }
 
   public async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-    const sourceUri = getSourceUriOrFail(uri);
+    const sourceUri = getSourceUri(uri);
     return vscode.workspace.fs.stat(sourceUri);
   }
 
   public async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
-    const sourceUri = getSourceUriOrFail(uri);
+    const sourceUri = getSourceUri(uri);
     return vscode.workspace.fs.readDirectory(sourceUri);
   }
 
   public async createDirectory(uri: vscode.Uri): Promise<void> {
-    const sourceUri = getSourceUriOrFail(uri);
+    const sourceUri = getSourceUri(uri);
     await vscode.workspace.fs.createDirectory(sourceUri);
   }
 
   public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-    const state = Note.getOrFail(uri);
+    const state = Note.getOrAdd(uri);
     const raw = await vscode.workspace.fs.readFile(state.sourceUri);
     const content = Buffer.from(raw).toString('utf8');
 
@@ -66,7 +66,7 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
     options: { readonly create: boolean; readonly overwrite: boolean },
   ): Promise<void> {
     // Saving the decrypted virtual document enters here instead of writing plaintext to disk directly.
-    const state = Note.getOrFail(uri);
+    const state = Note.getOrAdd(uri);
 
     if (!state.password) {
       throw vscode.FileSystemError.NoPermissions(t('virtual.error.writeMissingPassword'));
@@ -114,13 +114,13 @@ export class EncryptNotesProvider implements vscode.FileSystemProvider {
     uri: vscode.Uri,
     options: { readonly recursive: boolean; readonly useTrash: boolean },
   ): Promise<void> {
-    const sourceUri = getSourceUriOrFail(uri);
+    const sourceUri = getSourceUri(uri);
     await vscode.workspace.fs.delete(sourceUri, options);
   }
 
   public async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { readonly overwrite: boolean }): Promise<void> {
-    const oldSourceUri = getSourceUriOrFail(oldUri);
-    const newSourceUri = getSourceUriOrFail(newUri);
+    const oldSourceUri = getSourceUri(oldUri);
+    const newSourceUri = getSourceUri(newUri);
     await vscode.workspace.fs.rename(oldSourceUri, newSourceUri, options);
   }
 }

@@ -406,9 +406,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         if (stillOpen.includes(uri.toString())) {
           continue;
         }
-        if (!Note.remove(uri)) {
-          Note.get(uri)?.clear();
-        }
+
+        Note.get(uri)?.clear();
+        Note.remove(uri);
       }
 
       await updateContextAsync();
@@ -422,6 +422,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         return;
       }
 
+      configs.update();
       await updateContextAsync();
       await tryAutoDecrypt(vscode.window.activeTextEditor?.document);
     }),
