@@ -388,7 +388,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       await updateContextAsync();
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
-      if (vscode.window.activeTextEditor?.document.uri.toString() === event.document.uri.toString()) {
+      if (Note.isActive(event.document)) {
         updateContextAsync();
       }
     }),
@@ -402,7 +402,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         vscode.window.setStatusBarMessage(t('status.savedEncrypted'), 1600);
       }
 
-      if (vscode.window.activeTextEditor?.document.uri.toString() === document.uri.toString()) {
+      if (Note.isActive(document)) {
         await updateContextAsync();
       }
     }),

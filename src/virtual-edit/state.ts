@@ -145,4 +145,8 @@ export namespace Note {
 
   export const isVirtual = (document: vscode.TextDocument) => isVirtualUri(document.uri);
   export const isVirtualUri = (uri: vscode.Uri) => uri.scheme === EncrytConfig.UriScheme;
+
+  export const isActive = (document: vscode.TextDocument) => {
+    return vscode.window.activeTextEditor?.document?.uri.toString() === document.uri.toString();
+  };
 }
