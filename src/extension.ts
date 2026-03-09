@@ -365,15 +365,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
         await tryAutoDecrypt(editor.document);
       }
 
-      Note.clearAllPasswords();
-      await updateContextAsync();
-    }),
-    vscode.window.tabGroups.onDidChangeTabs(async (event) => {
-      for (const { input } of event.closed) {
-        if (input instanceof vscode.TabInputText) {
-          await Note.closeRelatedTabs(input.uri);
-        }
-      }
       await updateContextAsync();
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {

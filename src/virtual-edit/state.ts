@@ -82,16 +82,30 @@ export namespace Note {
 
   export const remove = (uri: vscode.Uri) => {
     const state = states.get(uri.toString());
-    if (state) {
-      states.delete(state.sourceUri.toString());
-      states.delete(state.virtualUri.toString());
+    if (!state) {
+      return;
     }
+
+    const sourceKey = state.sourceUri.toString();
+    const virtualKey = state.virtualUri.toString();
+    if (
+      vscode.workspace.textDocuments.some((document) => {
+        const key = document.uri.toString();
+        return key === sourceKey || key === virtualKey;
+      })
+    ) {
+      return;
+    }
+
+    states.delete(sourceKey);
+    states.delete(virtualKey);
   };
 
   export const modify = (uri: vscode.Uri, state: Partial<State>) => {
     const o = states.get(uri.toString());
     if (o) {
       Object.assign(o, state);
+      return;
     }
     vsc.showError(`NoteState not found for ${uri.toString()}`);
   };
@@ -99,6 +113,7 @@ export namespace Note {
   /**
    * ! If **not exist**, create one.
    */
+  // refactor 这里拆分为一定获取和不一定获取
   export const get = (uri: vscode.Uri): State => states.get(uri.toString()) ?? add(uri);
 
   // # services
@@ -130,16 +145,16 @@ export namespace Note {
   };
 
   export const closeRelatedTabs = async (uri: vscode.Uri) => {
+    const target = uri.toString();
     const tabs = vscode.window.tabGroups.all
       .flatMap((group) => group.tabs)
-      .filter((tab) => tab.input instanceof vscode.TabInputText && states.has(tab.input.uri.toString()));
+      .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === target);
 
     if (tabs.length === 0) {
       return;
     }
 
     await vscode.window.tabGroups.close(tabs, true);
-    remove(uri);
   };
 
   export const isVirtual = (document: vscode.TextDocument) => isVirtualUri(document.uri);
