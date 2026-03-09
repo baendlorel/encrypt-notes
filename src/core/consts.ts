@@ -11,11 +11,11 @@ export namespace EncrytConfig {
   // flags
   export const Flag = 'ENCRYPTED_FILE';
   export const FlagWithBom = '\uFEFFENCRYPTED_FILE';
-  export const UriScheme = 'encrypted-notes-decrypted';
+  export const UriScheme = 'secret-notes-decrypted';
 }
 
 export namespace Consts {
-  export const ExtensionId = 'encrypted-notes';
+  export const ExtensionId = 'secret-notes';
 
   /**
    * Virtual document scheme used for decrypted content.
@@ -46,6 +46,6 @@ export namespace Configs {
 }
 
 export namespace Commands {
-  export const Encrypt = 'encrypted-notes.encrypt';
-  export const Decrypt = 'encrypted-notes.decrypt';
+  export const Encrypt = 'secret-notes.encrypt';
+  export const Decrypt = 'secret-notes.decrypt';
 }

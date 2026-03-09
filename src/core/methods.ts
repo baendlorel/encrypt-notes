@@ -4,7 +4,7 @@ import { ContextKey } from './consts.js';
 
 export namespace vsc {
   export const setContext = (key: ContextKey, value: any) =>
-    vscode.commands.executeCommand('setContext', 'encryptedNotes.' + key, value);
+    vscode.commands.executeCommand('setContext', 'secretNotes.' + key, value);
 
   export const showError = (message: string) => vscode.window.showErrorMessage(message);
 

@@ -10,7 +10,7 @@ const hasUtf8Bom = (content: Uint8Array): boolean =>
 
 const getSourceUri = (uri: vscode.Uri): vscode.Uri => Note.getOrAdd(uri).sourceUri;
 
-export class EncryptNotesProvider implements vscode.FileSystemProvider {
+export class SecretNotesProvider implements vscode.FileSystemProvider {
   private readonly changeEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
   // & Part of the `vscode.FileSystemProvider` interface

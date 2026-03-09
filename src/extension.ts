@@ -7,7 +7,7 @@ import { NoteError } from './lib/errors.js';
 
 import { vsc } from './core/methods.js';
 import { Note } from './virtual-edit/state.js';
-import { EncryptNotesProvider } from './virtual-edit/virtual-edit.js';
+import { SecretNotesProvider } from './virtual-edit/virtual-edit.js';
 import { CrypNote } from './lib/crypto.js';
 import { EncryptionCodeLensProvider } from './core/code-lens.provider.js';
 
@@ -344,7 +344,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     EncryptionCodeLensProvider.emitter,
-    vscode.workspace.registerFileSystemProvider(EncrytConfig.UriScheme, new EncryptNotesProvider(), {
+    vscode.workspace.registerFileSystemProvider(EncrytConfig.UriScheme, new SecretNotesProvider(), {
       isCaseSensitive: true,
     }),
     vscode.languages.registerCodeLensProvider(
@@ -352,8 +352,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       new EncryptionCodeLensProvider(),
     ),
     // & This is for menu editor/title to trigger
-    vscode.commands.registerCommand('encrypted-notes.encrypt', () => handleActiveDocument('encrypt')),
-    vscode.commands.registerCommand('encrypted-notes.decrypt', () => handleActiveDocument('decrypt')),
+    vscode.commands.registerCommand('secret-notes.encrypt', () => handleActiveDocument('encrypt')),
+    vscode.commands.registerCommand('secret-notes.decrypt', () => handleActiveDocument('decrypt')),
 
     vscode.workspace.onDidOpenTextDocument(async (document) => {
       await Note.refresh(document);

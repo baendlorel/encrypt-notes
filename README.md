@@ -1,4 +1,4 @@
-# Encrypted Notes
+# Secret Notes
 
 A VS Code extension for keeping local text notes encrypted on disk while editing them in a temporary decrypted view.
 
@@ -28,8 +28,8 @@ ENCRYPTED_FILE
 
 ## Commands
 
-- `Encrypted Notes: Encrypt Current File` (`encrypted-notes.encrypt`)
-- `Encrypted Notes: Permanently Decrypt Current File` (`encrypted-notes.decrypt`)
+- `Secret Notes: Encrypt Current File` (`secret-notes.encrypt`)
+- `Secret Notes: Permanently Decrypt Current File` (`secret-notes.decrypt`)
 
 > The UI `Decrypt` button / CodeLens runs the permanent decrypt command. Temporary decrypted editing is opened automatically after password entry.
 
@@ -37,9 +37,9 @@ ENCRYPTED_FILE
 
 ```jsonc
 {
-  "encrypted-notes.fileExtensions": ["txt", "md"],
-  "encrypted-notes.actionButtonLocation": "Fisrt Line",
-  "encrypted-notes.passwordKeepMinute": 5,
+  "secret-notes.fileExtensions": ["txt", "md"],
+  "secret-notes.actionButtonLocation": "Fisrt Line",
+  "secret-notes.passwordKeepMinute": 5,
 }
 ```
 

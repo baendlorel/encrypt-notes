@@ -1,6 +1,6 @@
 {
-  "name": "encrypted-notes",
-  "displayName": "Encrypted Notes",
+  "name": "secret-notes",
+  "displayName": "Secret Notes",
   "description": "Encrypt and decrypt text files in VS Code with AES-256-GCM.",
   "description_zh": "在 VS Code 中使用 AES-256-GCM 对文本文件进行加密与解密。",
   "version": "0.1.0",
@@ -25,7 +25,7 @@
     "text"
   ],
   "repository": {
-    "url": "https://github.com/baendlorel/encrypted-notes"
+    "url": "https://github.com/baendlorel/secret-notes"
   },
   "license": "MIT",
   "icon": "assets/logo.png",
@@ -35,14 +35,14 @@
   },
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:encrypted-notes.encrypt",
-    "onCommand:encrypted-notes.decrypt"
+    "onCommand:secret-notes.encrypt",
+    "onCommand:secret-notes.decrypt"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "encrypted-notes.encrypt",
+        "command": "secret-notes.encrypt",
         "title": "%command.encrypt.title%",
         "category": "%extension.category%",
         "icon": {
@@ -51,7 +51,7 @@
         }
       },
       {
-        "command": "encrypted-notes.decrypt",
+        "command": "secret-notes.decrypt",
         "title": "%command.decrypt.title%",
         "category": "%extension.category%",
         "icon": {
@@ -63,21 +63,21 @@
     "menus": {
       "editor/title": [
         {
-          "command": "encrypted-notes.encrypt",
+          "command": "secret-notes.encrypt",
           "group": "navigation@0",
-          "when": "encryptedNotes.buttonOnEditorTitle && encryptedNotes.canEncrypt"
+          "when": "secretNotes.buttonOnEditorTitle && secretNotes.canEncrypt"
         },
         {
-          "command": "encrypted-notes.decrypt",
+          "command": "secret-notes.decrypt",
           "group": "navigation@0",
-          "when": "encryptedNotes.buttonOnEditorTitle && encryptedNotes.canDecrypt"
+          "when": "secretNotes.buttonOnEditorTitle && secretNotes.canDecrypt"
         }
       ]
     },
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
-        "encrypted-notes.fileExtensions": {
+        "secret-notes.fileExtensions": {
           "type": "array",
           "default": [
             "txt",
@@ -88,7 +88,7 @@
           },
           "markdownDescription": "%configuration.fileExtensions.description%"
         },
-        "encrypted-notes.actionButtonLocation": {
+        "secret-notes.actionButtonLocation": {
           "type": "string",
           "default": "%configuration.actionButtonLocation.firstLine.value%",
           "enum": [
@@ -101,7 +101,7 @@
           ],
           "description": "%configuration.actionButtonLocation.description%"
         },
-        "encrypted-notes.passwordKeepMinute": {
+        "secret-notes.passwordKeepMinute": {
           "type": "number",
           "default": 5,
           "minimum": 0,

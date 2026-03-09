@@ -52,7 +52,7 @@
    - 虽然激活时大多会被 update() 覆盖，但实现上还是不干净。
 7. README / package.nls / 实际代码有几处不一致
    - 例子：
-     - README 里还有 encrypted-notes.enabled
+     - README 里还有 secret-notes.enabled
      - README 里的命令列表和实际贡献命令不一致
      - README 写的加密头格式是 #**ENCRYPTED_FILE**#，代码实际是 ENCRYPTED_FILE
    - 影响：主要是误导用户，不是运行时 bug。

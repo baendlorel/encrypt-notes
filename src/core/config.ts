@@ -2,7 +2,7 @@ import path from 'node:path';
 import vscode from 'vscode';
 import { Configs, Consts } from './consts.js';
 
-class EncryptNotesConfiguration {
+class SecretNotesConfiguration {
   private config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration(Consts.ExtensionId);
 
   private fileExtensions: Set<string> = new Set();
@@ -63,4 +63,4 @@ class EncryptNotesConfiguration {
   }
 }
 
-export const configs = new EncryptNotesConfiguration();
+export const configs = new SecretNotesConfiguration();

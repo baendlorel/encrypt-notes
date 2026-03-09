@@ -24,7 +24,7 @@ export const en: typeof zh = {
   'error.permanentDecrypt.writePlainFailed': 'Unable to write plaintext back to the source file.',
   'error.permanentDecrypt.applyFailed': 'Unable to write decrypted content into current document.',
   'error.permanentDecrypt.saveFailed': 'File was decrypted, but auto save failed. Please save manually.',
-  'error.extension.disabled': 'Extension is currently disabled. Please enable encrypted-notes.enabled first.',
+  'error.extension.disabled': 'Extension is currently disabled. Please enable secret-notes.enabled first.',
   'error.noActiveEditor': 'No active editor is available.',
   'info.configurationUpdated': 'Configuration updated.',
   'info.decrypt.openVirtualSuccess':
@@ -38,7 +38,7 @@ export const en: typeof zh = {
   'info.decrypt.notEncrypted': 'Current file is not in encrypted format.',
   'info.permanentDecrypt.saved': 'Permanently decrypted and saved. Future saves will no longer auto-encrypt.',
   'info.decrypt.notNeeded': 'Current file is not in an auto-encryption session. No permanent decrypt needed.',
-  'status.savedEncrypted': 'Encrypted Notes: File saved in encrypted format.',
+  'status.savedEncrypted': 'Secret Notes: File saved in encrypted format.',
   'virtual.displayPrefixDecrypted': '[Decrypted]',
   'virtual.error.readMissingPassword': 'Missing password. Please decrypt the file again first.',
   'virtual.error.readInvalidPassword': 'Invalid password. Close and reopen the file.',

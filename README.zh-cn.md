@@ -1,4 +1,4 @@
-# Encrypted Notes
+# Secret Notes
 
 一个 VS Code 扩展：让本地文本笔记以加密形式落盘，并在临时明文视图中继续编辑。
 
@@ -28,8 +28,8 @@ ENCRYPTED_FILE
 
 ## 命令
 
-- `加密笔记: 加密当前文件`（`encrypted-notes.encrypt`）
-- `加密笔记: 永久解密当前文件`（`encrypted-notes.decrypt`）
+- `秘密笔记: 加密当前文件`（`secret-notes.encrypt`）
+- `秘密笔记: 永久解密当前文件`（`secret-notes.decrypt`）
 
 > 界面里的 `解密` 按钮 / CodeLens 实际执行的是“永久解密当前文件”。临时明文编辑视图是在输入密码后自动打开的。
 
@@ -37,9 +37,9 @@ ENCRYPTED_FILE
 
 ```jsonc
 {
-  "encrypted-notes.fileExtensions": ["txt", "md"],
-  "encrypted-notes.actionButtonLocation": "首行",
-  "encrypted-notes.passwordKeepMinute": 5,
+  "secret-notes.fileExtensions": ["txt", "md"],
+  "secret-notes.actionButtonLocation": "首行",
+  "secret-notes.passwordKeepMinute": 5,
 }
 ```
 
