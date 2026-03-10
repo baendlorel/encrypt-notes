@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      minimatch:
+        specifier: ^10.0.3
+        version: 10.0.3
     devDependencies:
       '@rollup/plugin-commonjs':
         specifier: ^29.0.2

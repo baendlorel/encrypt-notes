@@ -28,6 +28,16 @@ export type ContextKey = 'canEncrypt' | 'canDecrypt' | 'buttonOnEditorTitle';
 
 export namespace Configs {
   export const DefaultFileExtensions = ['.txt', '.md'];
+  export const DefaultExclude = [
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/out/**',
+    '**/build/**',
+    '**/coverage/**',
+    '**/.git/**',
+    '**/.next/**',
+    '**/.turbo/**',
+  ];
   export const DefaultButtonLocation: ButtonLocation = ButtonLocation.FirstLine;
   export const DefaultPasswordKeepMinute = 5;
   export const enum ButtonLocation {

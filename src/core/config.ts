@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { minimatch } from 'minimatch';
 import vscode from 'vscode';
 import { Configs, Consts } from './consts.js';
 
@@ -6,6 +7,7 @@ class SecretNotesConfiguration {
   private config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration(Consts.ExtensionId);
 
   private fileExtensions: Set<string> = new Set();
+  private exclude: string[] = [];
   private buttonLocation: Configs.ButtonLocation = Configs.DefaultButtonLocation;
 
   passwordKeepTime = Configs.DefaultPasswordKeepMinute * 60 * 1000;
@@ -20,6 +22,9 @@ class SecretNotesConfiguration {
         .map((v) => (v.startsWith('.') ? v : '.' + v))
         .filter(Boolean),
     );
+
+    const rawExclude = this.config.get<string[]>('exclude', Configs.DefaultExclude);
+    this.exclude = rawExclude.map((v) => v.trim()).filter(Boolean);
 
     const rawActionButtonLocation = this.config.get<string>('actionButtonLocation');
     this.buttonLocation = Configs.justifyButtonLocation(rawActionButtonLocation);
@@ -42,10 +47,17 @@ class SecretNotesConfiguration {
         return false;
       }
 
-      args = path.extname(args.fsPath).toLowerCase();
+      return this.fileExtensions.has(path.extname(args.fsPath).toLowerCase()) && !this.isExcluded(args);
     }
 
     return this.fileExtensions.has(args);
+  }
+
+  private isExcluded(uri: vscode.Uri): boolean {
+    const normalizedPath = uri.fsPath.split(path.sep).join('/');
+    return this.exclude.some((pattern) =>
+      minimatch(normalizedPath, pattern, { dot: true, nocase: process.platform === 'win32' }),
+    );
   }
 
   /**

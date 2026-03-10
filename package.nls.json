@@ -4,6 +4,7 @@
   "command.decrypt.title": "Permanently Decrypt Current File",
   "configuration.title": "Secret Notes",
   "configuration.fileExtensions.description": "File extensions to manage (without leading dots), for example `[\"txt\", \"md\"]`.",
+  "configuration.exclude.description": "Glob patterns to ignore, for example `[\"**/node_modules/**\", \"**/dist/**\"]`. Matching files will not show encrypt/decrypt actions.",
   "configuration.actionButtonLocation.description": "Choose where to show encrypt/decrypt action buttons.",
   "configuration.passwordKeepMinute.description": "Password cache time in minutes. After this time, the cached password in state should be cleared. Set to `0` to disable caching.",
   "configuration.actionButtonLocation.firstLine": "Show on first line (CodeLens)",
