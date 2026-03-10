@@ -4,6 +4,8 @@ A VS Code extension for keeping local text notes encrypted on disk while editing
 
 [简体中文](./README.zh-cn.md)
 
+<img src="/assets/encrypt.gif">
+
 ## How it works
 
 - Works with local files only.

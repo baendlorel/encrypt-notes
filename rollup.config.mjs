@@ -39,9 +39,9 @@ const options = [
     plugins: [
       funcMacro(),
       constEnum(),
+      typescript({ tsconfig, removeComments: false }),
       resolve(),
       commonjs(),
-      typescript({ tsconfig, removeComments: false }),
       conditional({ variables: { DEBUG: IS_DEV } }),
       IS_DEV
         ? null

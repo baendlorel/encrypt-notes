@@ -4,6 +4,8 @@
 
 [English](./README.md)
 
+<img src="/assets/encrypt.gif">
+
 ## 实际工作方式
 
 - 仅支持本地文件。
