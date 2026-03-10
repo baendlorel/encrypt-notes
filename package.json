@@ -3,7 +3,7 @@
   "displayName": "Secret Notes",
   "description": "Encrypt and decrypt text files in VS Code with AES-256-GCM.",
   "description_zh": "在 VS Code 中使用 AES-256-GCM 对文本文件进行加密与解密。",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "purpose": "vscode-extension",
   "publisher": "KasukabeTsumugi",
   "engines": {
@@ -91,14 +91,14 @@
         "secret-notes.exclude": {
           "type": "array",
           "default": [
-            "**/node_modules/**",
-            "**/dist/**",
-            "**/out/**",
-            "**/build/**",
-            "**/coverage/**",
-            "**/.git/**",
-            "**/.next/**",
-            "**/.turbo/**"
+            "node_modules",
+            "dist",
+            "out",
+            "build",
+            "coverage",
+            ".git",
+            ".next",
+            ".turbo"
           ],
           "items": {
             "type": "string"
@@ -137,9 +137,7 @@
     "pub": "vsce package -o ./bin",
     "publish": "pnpm build && vsce publish"
   },
-  "dependencies": {
-    "minimatch": "^10.0.3"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-node-resolve": "^16.0.3",

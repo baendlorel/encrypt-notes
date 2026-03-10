@@ -1,5 +1,4 @@
 import path from 'node:path';
-import { minimatch } from 'minimatch';
 import vscode from 'vscode';
 import { Configs, Consts } from './consts.js';
 
@@ -55,9 +54,7 @@ class SecretNotesConfiguration {
 
   private isExcluded(uri: vscode.Uri): boolean {
     const normalizedPath = uri.fsPath.split(path.sep).join('/');
-    return this.exclude.some((pattern) =>
-      minimatch(normalizedPath, pattern, { dot: true, nocase: process.platform === 'win32' }),
-    );
+    return this.exclude.some((pattern) => normalizedPath.includes(pattern));
   }
 
   /**
