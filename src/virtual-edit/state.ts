@@ -145,13 +145,13 @@ export namespace Note {
   /**
    * Use this for strictly getting the state.
    */
-  export const getOrFail = (uri: vscode.Uri): State => {
+  export const getOrFail = (uri: vscode.Uri, fnName: string = ''): State => {
     const state = states.get(uri.toString());
     if (state) {
       return state;
     } else {
-      vsc.showError(`NoteState not found for ${uri.toString()}`);
-      throw new Error(`NoteState not found for ${uri.toString()}`);
+      vsc.showError(`(${fnName}) NoteState not found for ${uri.toString()}`);
+      throw new Error(`(${fnName}) NoteState not found for ${uri.toString()}`);
     }
   };
 

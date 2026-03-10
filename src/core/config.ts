@@ -52,7 +52,7 @@ class SecretNotesConfiguration {
     return this.fileExtensions.has(args);
   }
 
-  private isExcluded(uri: vscode.Uri): boolean {
+  isExcluded(uri: vscode.Uri): boolean {
     const normalizedPath = uri.fsPath.split(path.sep).join('/');
     return this.exclude.some((pattern) => normalizedPath.includes(pattern));
   }
