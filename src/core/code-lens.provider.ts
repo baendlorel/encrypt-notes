@@ -13,6 +13,10 @@ export class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
       return [];
     }
 
+    if (!Note.isVirtual(document) && !configs.supports(document.uri)) {
+      return [];
+    }
+
     const state = Note.getOrAdd(document.uri);
     if (!configs.supports(state.sourceUri)) {
       return [];
