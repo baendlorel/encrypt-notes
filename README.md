@@ -41,14 +41,12 @@ ENCRYPTED_FILE
 {
   "secret-notes.fileExtensions": ["txt", "md"],
   "secret-notes.exclude": ["**/node_modules/**", "**/dist/**"],
-  "secret-notes.actionButtonLocation": "Fisrt Line",
   "secret-notes.passwordKeepMinute": 5,
 }
 ```
 
 - `fileExtensions`: accepts values with or without leading dots.
 - `exclude`: glob patterns for folders or files that should be ignored. The default list includes common generated or vendor folders such as `node_modules`, `dist`, `out`, `build`, `coverage`, `.git`, `.next`, and `.turbo`.
-- `actionButtonLocation`: English values are `"Fisrt Line"` and `"Editor Title"`; Chinese values `"首行"` and `"编辑器右上角"` also work.
 - `passwordKeepMinute`: password cache time in memory. `0` effectively clears the password immediately after it is set.
 
 ## Limitations

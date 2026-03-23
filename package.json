@@ -65,12 +65,12 @@
         {
           "command": "secret-notes.encrypt",
           "group": "navigation@0",
-          "when": "secretNotes.buttonOnEditorTitle && secretNotes.canEncrypt"
+          "when": "!secretNotes.isEncrypted"
         },
         {
           "command": "secret-notes.decrypt",
           "group": "navigation@0",
-          "when": "secretNotes.buttonOnEditorTitle && secretNotes.canDecrypt"
+          "when": "secretNotes.isEncrypted"
         }
       ]
     },
@@ -104,19 +104,6 @@
             "type": "string"
           },
           "markdownDescription": "%configuration.exclude.description%"
-        },
-        "secret-notes.actionButtonLocation": {
-          "type": "string",
-          "default": "%configuration.actionButtonLocation.firstLine.value%",
-          "enum": [
-            "%configuration.actionButtonLocation.firstLine.value%",
-            "%configuration.actionButtonLocation.editorTitle.value%"
-          ],
-          "enumDescriptions": [
-            "%configuration.actionButtonLocation.firstLine%",
-            "%configuration.actionButtonLocation.editorTitle%"
-          ],
-          "description": "%configuration.actionButtonLocation.description%"
         },
         "secret-notes.passwordKeepMinute": {
           "type": "number",

@@ -41,14 +41,12 @@ ENCRYPTED_FILE
 {
   "secret-notes.fileExtensions": ["txt", "md"],
   "secret-notes.exclude": ["**/node_modules/**", "**/dist/**"],
-  "secret-notes.actionButtonLocation": "首行",
   "secret-notes.passwordKeepMinute": 5,
 }
 ```
 
 - `fileExtensions`：带不带前导点都可以。
 - `exclude`：用于忽略文件或目录的 glob 模式。默认会忽略 `node_modules`、`dist`、`out`、`build`、`coverage`、`.git`、`.next`、`.turbo` 这些常见目录。
-- `actionButtonLocation`：中文可用值是 `"首行"`、`"编辑器右上角"`；英文环境下对应 `"Fisrt Line"`、`"Editor Title"`。
 - `passwordKeepMinute`：密码在内存中的缓存时间。设为 `0` 时，效果等同于刚设置就立即清空。
 
 ## 限制

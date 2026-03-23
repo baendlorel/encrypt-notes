@@ -24,26 +24,12 @@ export namespace Consts {
   export const UTF8_BOM_BUFFER = Buffer.from([0xef, 0xbb, 0xbf]);
 }
 
-export type ContextKey = 'isEncrypted' | 'buttonOnEditorTitle';
+export type ContextKey = 'isEncrypted';
 
 export namespace Configs {
   export const DefaultFileExtensions = ['.txt', '.md'];
   export const DefaultExclude = ['node_modules', 'dist', 'out', 'build', 'coverage', '.git', '.next', '.turbo'];
-  export const DefaultButtonLocation: ButtonLocation = ButtonLocation.FirstLine;
   export const DefaultPasswordKeepMinute = 5;
-  export const enum ButtonLocation {
-    FirstLine,
-    EditorTitle,
-  }
-
-  const buttonLocationMap: Record<ButtonLocationRaw, ButtonLocation> = {
-    'Fisrt Line': ButtonLocation.FirstLine,
-    首行: ButtonLocation.FirstLine,
-    'Editor Title': ButtonLocation.EditorTitle,
-    编辑器右上角: ButtonLocation.EditorTitle,
-  };
-  export const justifyButtonLocation = (value: string = ''): ButtonLocation =>
-    buttonLocationMap[value as ButtonLocationRaw] ?? ButtonLocation.FirstLine;
 }
 
 export namespace Commands {

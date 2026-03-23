@@ -9,7 +9,6 @@ import { vsc } from './core/methods.js';
 import { Note } from './virtual-edit/state.js';
 import { SecretNotesProvider } from './virtual-edit/virtual-edit.js';
 import { CrypNote } from './lib/crypto.js';
-import { EncryptionCodeLensProvider } from './core/code-lens.provider.js';
 
 const promptPassword = async (prompt: string): Promise<string | undefined> => {
   const password = await vscode.window.showInputBox({
@@ -54,9 +53,7 @@ const shouldTrack = (doc?: vscode.TextDocument): doc is vscode.TextDocument =>
 
 const updateContextAsync = async (): Promise<void> => {
   const doc = vscode.window.activeTextEditor?.document;
-  await vsc.setContext('buttonOnEditorTitle', configs.buttonOnEditorTitle);
   await vsc.setContext('isEncrypted', shouldTrack(doc) && CrypNote.isEncrypted(doc));
-  EncryptionCodeLensProvider.emitter.fire();
 };
 
 const openVirtualEditor = async (
@@ -304,14 +301,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
   configs.update();
 
   context.subscriptions.push(
-    EncryptionCodeLensProvider.emitter,
     vscode.workspace.registerFileSystemProvider(EncrytConfig.UriScheme, new SecretNotesProvider(), {
       isCaseSensitive: true,
     }),
-    vscode.languages.registerCodeLensProvider(
-      [{ scheme: 'file' }, { scheme: EncrytConfig.UriScheme }],
-      new EncryptionCodeLensProvider(),
-    ),
     // & This is for menu editor/title to trigger
     vscode.commands.registerCommand('secret-notes.encrypt', () => handleActiveDocument('encrypt')),
     vscode.commands.registerCommand('secret-notes.decrypt', () => handleActiveDocument('decrypt')),

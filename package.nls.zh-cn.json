@@ -5,10 +5,5 @@
   "configuration.title": "秘密笔记",
   "configuration.fileExtensions.description": "需要处理的文件扩展名（不带点），例如 `[\"txt\", \"md\"]`。",
   "configuration.exclude.description": "需要文件夹名，例如 `[\"node_modules\", \"dist\"]`。匹配到的文件不会显示加密/永久解密操作。",
-  "configuration.actionButtonLocation.description": "选择加密/永久解密按钮显示位置。",
-  "configuration.passwordKeepMinute.description": "密码缓存时间，单位为分钟。超过这个时间后，state 中缓存的密码应被清空。设为 `0` 表示不缓存。",
-  "configuration.actionButtonLocation.firstLine": "显示在首行（CodeLens）",
-  "configuration.actionButtonLocation.editorTitle": "显示在编辑器右上角（SVG 图标）",
-  "configuration.actionButtonLocation.firstLine.value": "首行",
-  "configuration.actionButtonLocation.editorTitle.value": "编辑器右上角"
+  "configuration.passwordKeepMinute.description": "密码缓存时间，单位为分钟。超过这个时间后，state 中缓存的密码应被清空。设为 `0` 表示不缓存。"
 }

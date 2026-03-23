@@ -7,7 +7,6 @@ class SecretNotesConfiguration {
 
   private fileExtensions: Set<string> = new Set();
   private exclude: string[] = [];
-  private buttonLocation: Configs.ButtonLocation = Configs.DefaultButtonLocation;
 
   passwordKeepTime = Configs.DefaultPasswordKeepMinute * 60 * 1000;
 
@@ -24,9 +23,6 @@ class SecretNotesConfiguration {
 
     const rawExclude = this.config.get<string[]>('exclude', Configs.DefaultExclude);
     this.exclude = rawExclude.map((v) => v.trim()).filter(Boolean);
-
-    const rawActionButtonLocation = this.config.get<string>('actionButtonLocation');
-    this.buttonLocation = Configs.justifyButtonLocation(rawActionButtonLocation);
 
     const rawPasswordKeepTime =
       this.config.get<number>('passwordKeepMinute', Configs.DefaultPasswordKeepMinute) * 60 * 1000;
@@ -56,20 +52,6 @@ class SecretNotesConfiguration {
   isExcluded(uri: vscode.Uri): boolean {
     const normalizedPath = uri.fsPath.split(path.sep).join('/');
     return this.exclude.some((pattern) => normalizedPath.includes(pattern));
-  }
-
-  /**
-   * If `true`, show the code lens action buttons.
-   */
-  get buttonOnFirstLine(): boolean {
-    return this.buttonLocation === Configs.ButtonLocation.FirstLine;
-  }
-
-  /**
-   * If `true`, show action buttons on the editor title.
-   */
-  get buttonOnEditorTitle(): boolean {
-    return this.buttonLocation === Configs.ButtonLocation.EditorTitle;
   }
 }
 
