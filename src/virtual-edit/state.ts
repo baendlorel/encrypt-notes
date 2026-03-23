@@ -109,13 +109,13 @@ export namespace Note {
     if (!state) {
       return false;
     }
+    state.clear();
 
     const keys = [...states.entries()].flatMap(([key, value]) => (value === state ? [key] : []));
     if (vscode.workspace.textDocuments.some((document) => keys.includes(document.uri.toString()))) {
       return false;
     }
 
-    state.clear();
     keys.forEach((key) => states.delete(key));
     return true;
   };
