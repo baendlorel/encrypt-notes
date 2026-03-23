@@ -191,10 +191,15 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 /**
  * Permanently decrypt
  */
-const decrypt = async (document: vscode.TextDocument): Promise<void> => {
+const decrypt = async (document: vscode.TextDocument, password: string): Promise<void> => {
   const state = Note.getOrFail(document.uri, 'decrypt');
 
   if (Note.isVirtual(document)) {
+    if (state.password !== password) {
+      vsc.showError(t('error.decrypt.failed'));
+      return;
+    }
+
     const plainText = document.getText();
 
     try {
@@ -219,12 +224,6 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
 
   if (!CrypNote.isEncrypted(document)) {
     vsc.setStatusBar(t('info.decrypt.notNeeded'));
-    return;
-  }
-
-  const cachedPassword = state?.password;
-  const password = cachedPassword ?? (await promptPassword(t('prompt.decryptPassword')));
-  if (!password) {
     return;
   }
 
@@ -276,7 +275,13 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
       vsc.setStatusBar(t('info.decrypt.notNeeded'));
       return;
     }
-    await decrypt(document);
+
+    const password = await promptPassword(t('prompt.decryptPassword'));
+    if (!password) {
+      return;
+    }
+
+    await decrypt(document, password);
     await updateContextAsync();
     return;
   }
