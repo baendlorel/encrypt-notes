@@ -110,7 +110,9 @@ export namespace Note {
 
     // ! If place state.clear() here. Decryption will fail with 'noNeed'
 
-    const keys = [...states.entries()].flatMap(([key, value]) => (value === state ? [key] : []));
+    const keys = [...states.entries()]
+      .map(([key, value]) => (value === state ? key : null))
+      .filter((key) => key !== null);
     if (vscode.workspace.textDocuments.some((document) => keys.includes(document.uri.toString()))) {
       return false;
     }
