@@ -1,6 +1,7 @@
 import vscode from 'vscode';
 import { t } from '../i18n/index.js';
 import { Note } from '../virtual-edit/state.js';
+import { CrypNote } from '../lib/crypto.js';
 
 import { Commands } from './consts.js';
 import { configs } from './config.js';
@@ -23,8 +24,9 @@ export class EncryptionCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     const isSourceFile = document.uri.scheme === 'file';
-    const canEncrypt = isSourceFile && !state.encrypted;
-    const canDecrypt = (isSourceFile && state.encrypted) || Note.isVirtual(document);
+    const isEncrypted = CrypNote.isEncrypted(document);
+    const canEncrypt = isSourceFile && !isEncrypted;
+    const canDecrypt = (isSourceFile && isEncrypted) || Note.isVirtual(document);
 
     if (!canEncrypt && !canDecrypt) {
       return [];

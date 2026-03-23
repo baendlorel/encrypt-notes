@@ -49,27 +49,13 @@ const apply = async (document: vscode.TextDocument, nextContent: string): Promis
 /**
  * Whether it satisfies the condition to be tracked.
  */
-const shouldTrack = (document?: vscode.TextDocument): document is vscode.TextDocument =>
-  !!document && (Note.isVirtual(document) || configs.supports(document.uri));
+const shouldTrack = (doc?: vscode.TextDocument): doc is vscode.TextDocument =>
+  !!doc && (Note.isVirtual(doc) || configs.supports(doc));
 
 const updateContextAsync = async (): Promise<void> => {
-  const document = vscode.window.activeTextEditor?.document;
-
+  const doc = vscode.window.activeTextEditor?.document;
   await vsc.setContext('buttonOnEditorTitle', configs.buttonOnEditorTitle);
-
-  let canEncrypt = false;
-  let canDecrypt = false;
-
-  if (shouldTrack(document)) {
-    const isSourceFile = document.uri.scheme === 'file';
-    const isEncrypted = CrypNote.isEncrypted(document);
-    canEncrypt = !isEncrypted;
-    canDecrypt = (isSourceFile && isEncrypted) || Note.isVirtual(document);
-  }
-
-  await vsc.setContext('canEncrypt', canEncrypt);
-  await vsc.setContext('canDecrypt', canDecrypt);
-
+  await vsc.setContext('isEncrypted', shouldTrack(doc) && CrypNote.isEncrypted(doc));
   EncryptionCodeLensProvider.emitter.fire();
 };
 

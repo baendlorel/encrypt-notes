@@ -38,18 +38,19 @@ class SecretNotesConfiguration {
   /**
    * Whether the given file extension is supported by the current configuration.
    */
+  supports(document: vscode.TextDocument): boolean;
   supports(fileExtension: string): boolean;
   supports(uri: vscode.Uri): boolean;
-  supports(args: string | vscode.Uri): boolean {
-    if (typeof args !== 'string') {
-      if (args.scheme !== 'file') {
-        return false;
-      }
-
-      return this.fileExtensions.has(path.extname(args.fsPath).toLowerCase()) && !this.isExcluded(args);
+  supports(arg: string | vscode.Uri | vscode.TextDocument): boolean {
+    if (typeof arg === 'string') {
+      return this.fileExtensions.has(arg);
     }
 
-    return this.fileExtensions.has(args);
+    const uri = arg instanceof vscode.Uri ? arg : arg.uri;
+    if (uri.scheme !== 'file') {
+      return false;
+    }
+    return this.fileExtensions.has(path.extname(uri.fsPath).toLowerCase()) && !this.isExcluded(uri);
   }
 
   isExcluded(uri: vscode.Uri): boolean {
