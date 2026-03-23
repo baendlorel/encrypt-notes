@@ -27,18 +27,6 @@ export namespace Note {
 
     public virtualUri: vscode.Uri;
 
-    public decryptedInSession: boolean = false;
-
-    public skippedAutoDecrypt: boolean = false;
-
-    /**
-     * Avoid decrypting again
-     * - original name is `decryptPromptInProgress`
-     */
-    public locked: boolean = false;
-
-    public encrypted: boolean = false;
-
     private _timer: NodeJS.Timeout | undefined = undefined;
     private _password: string | undefined = undefined;
 
@@ -73,11 +61,10 @@ export namespace Note {
       return this._password;
     }
 
-    /**
-     * When not encrypted, locked or skippedAutoDecrypt
-     */
-    get cannotDecrypt() {
-      return !this.encrypted || this.locked || this.skippedAutoDecrypt;
+    async isEncrypted() {
+      const raw = await vscode.workspace.fs.readFile(this.sourceUri);
+      const content = Buffer.from(raw).toString('utf8');
+      return CrypNote.isEncryptedText(content);
     }
 
     get isSourceActive() {
@@ -86,10 +73,6 @@ export namespace Note {
 
     clear() {
       this.password = undefined;
-      this.decryptedInSession = false;
-      this.skippedAutoDecrypt = false;
-      this.locked = false;
-      this.encrypted = false;
     }
   }
 
@@ -158,29 +141,6 @@ export namespace Note {
   export const getOrAdd = (uri: vscode.Uri): State => states.get(uri.toString()) ?? add(uri);
 
   // # services
-
-  /**
-   * Aim to refresh the state of the source file, not the virtual one.
-   */
-  export const refresh = async (document: vscode.TextDocument): Promise<State> => {
-    const state = getOrAdd(document.uri);
-
-    if (isVirtualUri(document.uri)) {
-      return state;
-    }
-
-    try {
-      const raw = await vscode.workspace.fs.readFile(state.sourceUri);
-      const content = Buffer.from(raw).toString('utf8');
-      state.encrypted = CrypNote.isEncryptedText(content);
-      return state;
-    } catch {
-      if (document.uri.scheme === 'file') {
-        state.encrypted = CrypNote.isEncrypted(document);
-      }
-      return state;
-    }
-  };
 
   export const closeRelatedTabs = async (uri: vscode.Uri) => {
     const target = uri.toString();
