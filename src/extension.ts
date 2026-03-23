@@ -21,40 +21,6 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
   return password ? password : undefined;
 };
 
-const confirmPassword = async (document: vscode.TextDocument): Promise<string | undefined> => {
-  const state = Note.getOrFail(document.uri, 'confirmPassword');
-
-  const password = await promptPassword(t('prompt.confirmDecrypt'));
-  if (!password) {
-    return undefined;
-  }
-
-  if (state.password === password) {
-    return password;
-  }
-
-  let encryptedContent: string;
-  if (Note.isVirtual(document)) {
-    try {
-      const sourceRaw = await vscode.workspace.fs.readFile(state.sourceUri);
-      encryptedContent = Buffer.from(sourceRaw).toString('utf8');
-    } catch {
-      vsc.showError(t('error.decrypt.failed'));
-      return undefined;
-    }
-  } else {
-    encryptedContent = document.getText();
-  }
-
-  try {
-    CrypNote.decrypt(encryptedContent, password);
-    return password;
-  } catch (error) {
-    NoteError.display(error);
-    return undefined;
-  }
-};
-
 const apply = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
   const edit = new vscode.WorkspaceEdit();
   const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
@@ -183,6 +149,16 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
     if (!password) {
       return;
     }
+
+    const confirmedPassword = await promptPassword(t('prompt.confirmEncryptPassword'));
+    if (!confirmedPassword) {
+      return;
+    }
+
+    if (confirmedPassword !== password) {
+      vsc.showError(t('error.encrypt.passwordMismatch'));
+      return;
+    }
   }
 
   const plainText = document.getText();
@@ -300,13 +276,6 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
       vsc.setStatusBar(t('info.decrypt.notNeeded'));
       return;
     }
-
-    const password = await confirmPassword(document);
-    if (!password) {
-      return;
-    }
-
-    Note.modify(document.uri, { password });
     await decrypt(document);
     await updateContextAsync();
     return;
