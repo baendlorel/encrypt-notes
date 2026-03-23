@@ -320,7 +320,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
           continue;
         }
 
-        Note.clearPassword(uri);
         Note.remove(uri);
       }
 

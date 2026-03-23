@@ -108,6 +108,8 @@ export namespace Note {
       return false;
     }
 
+    // ! If place state.clear() here. Decryption will fail with 'noNeed'
+
     const keys = [...states.entries()].flatMap(([key, value]) => (value === state ? [key] : []));
     if (vscode.workspace.textDocuments.some((document) => keys.includes(document.uri.toString()))) {
       return false;
@@ -115,16 +117,6 @@ export namespace Note {
 
     state.clear();
     keys.forEach((key) => states.delete(key));
-    return true;
-  };
-
-  export const clearPassword = (uri: vscode.Uri): boolean => {
-    const state = states.get(uri.toString());
-    if (!state) {
-      return false;
-    }
-
-    state.password = undefined;
     return true;
   };
 
