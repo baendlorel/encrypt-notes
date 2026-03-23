@@ -75,8 +75,9 @@ const updateContextAsync = async (): Promise<void> => {
   const doc = vscode.window.activeTextEditor?.document;
   if (shouldTrack(doc)) {
     const isEncrypted = CrypNote.isEncrypted(doc);
-    await vsc.setContext('canEncrypt', !isEncrypted);
-    await vsc.setContext('canDecrypt', isEncrypted);
+    const isVirtual = Note.isVirtual(doc);
+    await vsc.setContext('canEncrypt', !isEncrypted && !isVirtual);
+    await vsc.setContext('canDecrypt', isEncrypted || isVirtual);
   } else {
     await vsc.setContext('canEncrypt', false);
     await vsc.setContext('canDecrypt', false);
