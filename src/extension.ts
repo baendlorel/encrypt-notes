@@ -9,79 +9,13 @@ import { vsc } from './core/methods.js';
 import { Note } from './virtual-edit/state.js';
 import { SecretNotesProvider } from './virtual-edit/virtual-edit.js';
 import { CrypNote } from './lib/crypto.js';
-
-const promptPassword = async (prompt: string): Promise<string | undefined> => {
-  const password = await vscode.window.showInputBox({
-    prompt,
-    password: true,
-    ignoreFocusOut: true,
-    validateInput: (value) => (value.length === 0 ? t('prompt.passwordRequired') : undefined),
-  });
-  return password ? password : undefined;
-};
-
-/**
- * Confirms a password.
- * - Emit an error message if mismatch, and return false.
- * - Return true if confirmed.
- */
-const confirmPassword = async (password: string): Promise<boolean> => {
-  const confirmed = await promptPassword(t('prompt.confirmEncryptPassword'));
-  if (confirmed === undefined) {
-    return false; // muted return
-  }
-  if (confirmed === password) {
-    return true;
-  } else {
-    vsc.showError(t('error.encrypt.passwordMismatch'));
-    return false;
-  }
-};
+import { promptPassword, confirmPassword, shouldTrack, updateContextAsync } from './lib/utils.js';
 
 const apply = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
   const edit = new vscode.WorkspaceEdit();
   const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
   edit.replace(document.uri, range, nextContent);
   return vscode.workspace.applyEdit(edit);
-};
-
-/**
- * Whether it satisfies the condition to be tracked.
- */
-const shouldTrack = (doc?: vscode.TextDocument): doc is vscode.TextDocument =>
-  !!doc && (Note.isVirtual(doc) || configs.supports(doc));
-
-const getContextState = (
-  doc?: vscode.TextDocument,
-): {
-  canEncrypt: boolean;
-  canDecrypt: boolean;
-} => {
-  if (!shouldTrack(doc)) {
-    return {
-      canEncrypt: false,
-      canDecrypt: false,
-    };
-  }
-
-  const isEncrypted = CrypNote.isEncrypted(doc);
-  return {
-    canEncrypt: !isEncrypted,
-    canDecrypt: isEncrypted,
-  };
-};
-
-const updateContextAsync = async (): Promise<void> => {
-  const doc = vscode.window.activeTextEditor?.document;
-  if (shouldTrack(doc)) {
-    const isEncrypted = CrypNote.isEncrypted(doc);
-    const isVirtual = Note.isVirtual(doc);
-    await vsc.setContext('canEncrypt', !isEncrypted && !isVirtual);
-    await vsc.setContext('canDecrypt', isEncrypted || isVirtual);
-  } else {
-    await vsc.setContext('canEncrypt', false);
-    await vsc.setContext('canDecrypt', false);
-  }
 };
 
 const openVirtualEditor = async (
@@ -207,9 +141,9 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 /**
  * Permanently decrypt
  */
-// fixme 有时候解密完成后还会继续弹一次输入框
 const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   const state = Note.getOrFail(document.uri, 'decrypt');
+  // ! Removing password too early will cause failure of decryption
   if (!state.password) {
     vsc.setStatusBar(t('info.decrypt.notNeeded'));
     return;
@@ -386,6 +320,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
           continue;
         }
 
+        Note.clearPassword(uri);
         Note.remove(uri);
       }
 
