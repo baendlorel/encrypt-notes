@@ -51,9 +51,36 @@ const apply = async (document: vscode.TextDocument, nextContent: string): Promis
 const shouldTrack = (doc?: vscode.TextDocument): doc is vscode.TextDocument =>
   !!doc && (Note.isVirtual(doc) || configs.supports(doc));
 
+const getContextState = (
+  doc?: vscode.TextDocument,
+): {
+  canEncrypt: boolean;
+  canDecrypt: boolean;
+} => {
+  if (!shouldTrack(doc)) {
+    return {
+      canEncrypt: false,
+      canDecrypt: false,
+    };
+  }
+
+  const isEncrypted = CrypNote.isEncrypted(doc);
+  return {
+    canEncrypt: !isEncrypted,
+    canDecrypt: isEncrypted,
+  };
+};
+
 const updateContextAsync = async (): Promise<void> => {
   const doc = vscode.window.activeTextEditor?.document;
-  await vsc.setContext('isEncrypted', shouldTrack(doc) && CrypNote.isEncrypted(doc));
+  if (shouldTrack(doc)) {
+    const isEncrypted = CrypNote.isEncrypted(doc);
+    await vsc.setContext('canEncrypt', !isEncrypted);
+    await vsc.setContext('canDecrypt', isEncrypted);
+  } else {
+    await vsc.setContext('canEncrypt', false);
+    await vsc.setContext('canDecrypt', false);
+  }
 };
 
 const openVirtualEditor = async (

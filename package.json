@@ -65,12 +65,12 @@
         {
           "command": "secret-notes.encrypt",
           "group": "navigation@0",
-          "when": "!secretNotes.isEncrypted"
+          "when": "secretNotes.canEncrypt"
         },
         {
           "command": "secret-notes.decrypt",
           "group": "navigation@0",
-          "when": "secretNotes.isEncrypted"
+          "when": "secretNotes.canDecrypt"
         }
       ]
     },
