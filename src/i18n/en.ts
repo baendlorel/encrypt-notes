@@ -2,7 +2,7 @@ import { zh } from './zh.js';
 
 export const en: typeof zh = {
   'codelens.encrypt': 'Encrypt',
-  'codelens.decrypt': 'Decrypt',
+  'codelens.decrypt': 'Permanent Decrypt',
   'prompt.decryptPassword': 'Enter password to decrypt',
   'prompt.encryptPassword': 'Enter password to encrypt',
   'prompt.confirmEncryptPassword': 'Re-enter password to encrypt',

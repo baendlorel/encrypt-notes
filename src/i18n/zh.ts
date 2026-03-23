@@ -1,6 +1,6 @@
 export const zh = {
   'codelens.encrypt': '加密',
-  'codelens.decrypt': '解密',
+  'codelens.decrypt': '永久解密',
   'prompt.decryptPassword': '请输入解密密码',
   'prompt.encryptPassword': '请输入加密密码',
   'prompt.confirmEncryptPassword': '请再次输入加密密码',

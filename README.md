@@ -33,7 +33,7 @@ ENCRYPTED_FILE
 - `Secret Notes: Encrypt Current File` (`secret-notes.encrypt`)
 - `Secret Notes: Permanently Decrypt Current File` (`secret-notes.decrypt`)
 
-> The UI `Decrypt` button / CodeLens runs the permanent decrypt command. Temporary decrypted editing is opened automatically after password entry.
+> The UI `Permanent Decrypt` button / CodeLens runs the permanent decrypt command. Temporary decrypted editing is opened automatically after password entry.
 
 ## Settings
 
