@@ -402,7 +402,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
           continue;
         }
 
-        Note.get(uri)?.clear();
         Note.remove(uri);
       }
 

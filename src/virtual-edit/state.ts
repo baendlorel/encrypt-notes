@@ -14,7 +14,6 @@ export namespace Note {
     const lastSlash = sourcePath.lastIndexOf('/');
     const directoryPath = lastSlash >= 0 ? sourcePath.slice(0, lastSlash + 1) : '';
     const filename = lastSlash >= 0 ? sourcePath.slice(lastSlash + 1) : sourcePath;
-
     if (filename.length === 0) {
       return sourcePath;
     }
@@ -61,17 +60,23 @@ export namespace Note {
       return this._password;
     }
 
+    get isSourceActive() {
+      return vscode.window.activeTextEditor?.document?.uri.toString() === this.sourceUri.toString();
+    }
+
+    get isVirtualActive() {
+      return vscode.window.activeTextEditor?.document?.uri.toString() === this.virtualUri.toString();
+    }
+
     async isEncrypted() {
       const raw = await vscode.workspace.fs.readFile(this.sourceUri);
       const content = Buffer.from(raw).toString('utf8');
       return CrypNote.isEncryptedText(content);
     }
 
-    get isSourceActive() {
-      return vscode.window.activeTextEditor?.document?.uri.toString() === this.sourceUri.toString();
-    }
-
     clear() {
+      clearTimeout(this._timer);
+      this._timer = undefined;
       this.password = undefined;
     }
   }
@@ -110,20 +115,10 @@ export namespace Note {
       return false;
     }
 
+    state.clear();
     keys.forEach((key) => states.delete(key));
     return true;
   };
-
-  export const modify = (uri: vscode.Uri, state: Partial<State>) => {
-    const o = states.get(uri.toString());
-    if (o) {
-      Object.assign(o, state);
-      return;
-    }
-    vsc.showError(`NoteState not found for ${uri.toString()}`);
-  };
-
-  export const get = (uri: vscode.Uri): State | undefined => states.get(uri.toString());
 
   /**
    * Use this for strictly getting the state.
