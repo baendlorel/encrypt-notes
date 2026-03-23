@@ -46,7 +46,10 @@ const apply = async (document: vscode.TextDocument, nextContent: string): Promis
   return vscode.workspace.applyEdit(edit);
 };
 
-const shouldTrackDocument = (document?: vscode.TextDocument): document is vscode.TextDocument =>
+/**
+ * Whether it satisfies the condition to be tracked.
+ */
+const shouldTrack = (document?: vscode.TextDocument): document is vscode.TextDocument =>
   !!document && (Note.isVirtual(document) || configs.supports(document.uri));
 
 const updateContextAsync = async (): Promise<void> => {
@@ -57,11 +60,11 @@ const updateContextAsync = async (): Promise<void> => {
   let canEncrypt = false;
   let canDecrypt = false;
 
-  if (shouldTrackDocument(document)) {
-    const state = await Note.refresh(document);
+  if (shouldTrack(document)) {
     const isSourceFile = document.uri.scheme === 'file';
-    canEncrypt = !state.encrypted;
-    canDecrypt = (isSourceFile && state.encrypted) || Note.isVirtual(document);
+    const isEncrypted = CrypNote.isEncrypted(document);
+    canEncrypt = !isEncrypted;
+    canDecrypt = (isSourceFile && isEncrypted) || Note.isVirtual(document);
   }
 
   await vsc.setContext('canEncrypt', canEncrypt);
@@ -90,9 +93,6 @@ const openVirtualEditor = async (
 
   try {
     state.password = password;
-    state.decryptedInSession = true;
-    state.skippedAutoDecrypt = false;
-    state.encrypted = true;
 
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
 
@@ -104,7 +104,6 @@ const openVirtualEditor = async (
     if (showSuccessMessage) {
       vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
     }
-
     return true;
   } catch {
     vsc.showError(t('error.decrypt.openVirtualFailed'));
@@ -113,10 +112,6 @@ const openVirtualEditor = async (
 };
 
 const tryDecrypt = async (document: vscode.TextDocument, showSuccessMessage = true): Promise<boolean> => {
-  if (!CrypNote.isEncrypted(document)) {
-    return false;
-  }
-
   // & Since its encrypted, and it must have a state, otherwise it's weird, just fail.
   const state = Note.getOrFail(document.uri, 'tryDecrypt');
 
@@ -190,9 +185,6 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
   }
 
   state.password = password;
-  state.decryptedInSession = true;
-  state.encrypted = true;
-  state.skippedAutoDecrypt = false;
 
   const encryptedDocument = await vscode.workspace.openTextDocument(state.sourceUri);
   const opened = await openVirtualEditor(encryptedDocument, state, password, false);
@@ -306,8 +298,7 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
   }
 
   const state = Note.getOrAdd(document.uri);
-  state.encrypted = CrypNote.isEncrypted(document);
-  if (state.cannotDecrypt) {
+  if (!CrypNote.isEncrypted(document)) {
     return;
   }
 
@@ -315,15 +306,9 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
     return;
   }
 
-  state.locked = true;
-
   try {
-    const success = await tryDecrypt(document, false);
-    if (!success) {
-      state.skippedAutoDecrypt = true;
-    }
+    await tryDecrypt(document, false);
   } finally {
-    state.locked = false;
     await updateContextAsync();
   }
 };
@@ -346,16 +331,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('secret-notes.decrypt', () => handleActiveDocument('decrypt')),
 
     vscode.workspace.onDidOpenTextDocument(async (document) => {
-      if (shouldTrackDocument(document)) {
-        await Note.refresh(document);
+      if (shouldTrack(document)) {
         await tryAutoDecrypt(document);
       }
 
       await updateContextAsync();
     }),
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      if (shouldTrackDocument(editor?.document)) {
-        await Note.refresh(editor.document);
+      if (shouldTrack(editor?.document)) {
         await tryAutoDecrypt(editor.document);
       }
 
@@ -367,19 +350,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     vscode.workspace.onDidSaveTextDocument(async (document) => {
-      if (shouldTrackDocument(document)) {
-        const state = await Note.refresh(document);
-
+      if (shouldTrack(document)) {
         if (Note.isVirtual(document)) {
-          // After the virtual document save completes, refresh UI state to keep the editor in decrypted mode.
-          state.encrypted = false;
-          state.decryptedInSession = true;
           vscode.window.setStatusBarMessage(t('status.savedEncrypted'), 1600);
         }
       }
 
       if (Note.isActive(document)) {
-        await updateContextAsync();
+        await updateContextAsync(); // ?? 这里需要吗
       }
     }),
     vscode.window.tabGroups.onDidChangeTabs(async (event) => {
@@ -424,10 +402,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
   );
 
   const activeDocument = vscode.window.activeTextEditor?.document;
-  if (shouldTrackDocument(activeDocument)) {
-    await Note.refresh(activeDocument);
-  }
-
   await updateContextAsync();
   await tryAutoDecrypt(activeDocument);
 };
