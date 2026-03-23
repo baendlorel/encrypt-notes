@@ -21,6 +21,24 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
   return password ? password : undefined;
 };
 
+/**
+ * Confirms a password.
+ * - Emit an error message if mismatch, and return false.
+ * - Return true if confirmed.
+ */
+const confirmPassword = async (password: string): Promise<boolean> => {
+  const confirmedPassword = await promptPassword(t('prompt.confirmEncryptPassword'));
+  if (confirmedPassword === undefined) {
+    return false; // muted return
+  }
+  if (confirmedPassword === password) {
+    return true;
+  } else {
+    vsc.showError(t('error.encrypt.passwordMismatch'));
+    return false;
+  }
+};
+
 const apply = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
   const edit = new vscode.WorkspaceEdit();
   const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
@@ -150,13 +168,8 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
       return;
     }
 
-    const confirmedPassword = await promptPassword(t('prompt.confirmEncryptPassword'));
-    if (!confirmedPassword) {
-      return;
-    }
-
-    if (confirmedPassword !== password) {
-      vsc.showError(t('error.encrypt.passwordMismatch'));
+    const same = await confirmPassword(password);
+    if (!same) {
       return;
     }
   }
@@ -191,15 +204,20 @@ const encrypt = async (document: vscode.TextDocument): Promise<void> => {
 /**
  * Permanently decrypt
  */
-const decrypt = async (document: vscode.TextDocument, password: string): Promise<void> => {
+// fixme 有时候解密完成后还会继续弹一次输入框
+const decrypt = async (document: vscode.TextDocument): Promise<void> => {
   const state = Note.getOrFail(document.uri, 'decrypt');
+  if (!state.password) {
+    vsc.setStatusBar(t('info.decrypt.notNeeded'));
+    return;
+  }
+
+  const same = await confirmPassword(state.password);
+  if (!same) {
+    return;
+  }
 
   if (Note.isVirtual(document)) {
-    if (state.password !== password) {
-      vsc.showError(t('error.decrypt.failed'));
-      return;
-    }
-
     const plainText = document.getText();
 
     try {
@@ -229,7 +247,7 @@ const decrypt = async (document: vscode.TextDocument, password: string): Promise
 
   let plainText: string;
   try {
-    plainText = CrypNote.decrypt(document.getText(), password);
+    plainText = CrypNote.decrypt(document.getText(), state.password);
   } catch (error) {
     NoteError.display(error);
     return;
@@ -276,12 +294,7 @@ const handleActiveDocument = async (mode: 'encrypt' | 'decrypt'): Promise<void> 
       return;
     }
 
-    const password = await promptPassword(t('prompt.decryptPassword'));
-    if (!password) {
-      return;
-    }
-
-    await decrypt(document, password);
+    await decrypt(document);
     await updateContextAsync();
     return;
   }
