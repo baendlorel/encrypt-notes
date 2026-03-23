@@ -43,7 +43,7 @@ export class SecretNotesProvider implements vscode.FileSystemProvider {
     const raw = await vscode.workspace.fs.readFile(state.sourceUri);
     const content = Buffer.from(raw).toString('utf8');
 
-    if (!(state.encrypted = CrypNote.isEncryptedText(content))) {
+    if (!CrypNote.isEncryptedText(content)) {
       return raw;
     }
 
@@ -104,9 +104,6 @@ export class SecretNotesProvider implements vscode.FileSystemProvider {
 
     // Persist the encrypted bytes to the original source file on disk.
     await vscode.workspace.fs.writeFile(state.sourceUri, nextRaw);
-    state.encrypted = true;
-    state.decryptedInSession = true;
-
     this.changeEmitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
   }
 

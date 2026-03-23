@@ -27,11 +27,11 @@ const promptPassword = async (prompt: string): Promise<string | undefined> => {
  * - Return true if confirmed.
  */
 const confirmPassword = async (password: string): Promise<boolean> => {
-  const confirmedPassword = await promptPassword(t('prompt.confirmEncryptPassword'));
-  if (confirmedPassword === undefined) {
+  const confirmed = await promptPassword(t('prompt.confirmEncryptPassword'));
+  if (confirmed === undefined) {
     return false; // muted return
   }
-  if (confirmedPassword === password) {
+  if (confirmed === password) {
     return true;
   } else {
     vsc.showError(t('error.encrypt.passwordMismatch'));
