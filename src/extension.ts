@@ -11,6 +11,12 @@ import { SecretNotesProvider } from './virtual-edit/virtual-edit.js';
 import { CrypNote } from './lib/crypto.js';
 import { promptPassword, confirmPassword, shouldTrack, updateContextAsync } from './lib/utils.js';
 
+// Prevent duplicate decryption attempts for the same URI
+const pendingDecrypts = new Map<string, Promise<void>>();
+
+// Debounce timer for active editor changes to prevent rapid-fire triggers
+let activeEditorChangeTimeout: ReturnType<typeof setTimeout> | undefined;
+
 const apply = async (document: vscode.TextDocument, nextContent: string): Promise<boolean> => {
   const edit = new vscode.WorkspaceEdit();
   const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
@@ -39,6 +45,11 @@ const openVirtualEditor = async (
   try {
     state.password = password;
 
+    // Validate virtualUri is correctly constructed
+    if (!state.virtualUri || state.virtualUri.scheme !== 'secret-notes-decrypted') {
+      throw new Error(`Invalid virtual URI: ${state.virtualUri?.toString()}`);
+    }
+
     const targetViewColumn = vscode.window.activeTextEditor?.viewColumn;
 
     // Open the decrypted virtual document so later saves go through the custom file system provider.
@@ -50,8 +61,11 @@ const openVirtualEditor = async (
       vsc.setStatusBar(t('info.decrypt.openVirtualSuccess'));
     }
     return true;
-  } catch {
-    vsc.showError(t('error.decrypt.openVirtualFailed'));
+  } catch (error) {
+    // Clean up state to prevent inconsistent state
+    state.password = undefined;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    vsc.showError(`${t('error.decrypt.openVirtualFailed')}: ${errorMessage}`);
     return false;
   }
 };
@@ -242,7 +256,9 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
     return;
   }
 
+  const uriString = document.uri.toString();
   const state = Note.getOrAdd(document.uri);
+
   if (!CrypNote.isEncrypted(document)) {
     return;
   }
@@ -251,11 +267,25 @@ const tryAutoDecrypt = async (document?: vscode.TextDocument): Promise<void> => 
     return;
   }
 
-  try {
-    await tryDecrypt(document, false);
-  } finally {
-    await updateContextAsync();
+  // Prevent duplicate decryption attempts for the same URI
+  // If there's already a pending decrypt operation, wait for it to complete
+  if (pendingDecrypts.has(uriString)) {
+    await pendingDecrypts.get(uriString);
+    return;
   }
+
+  // Create new decrypt operation and store it in the map
+  const decryptPromise = (async () => {
+    try {
+      await tryDecrypt(document, false);
+    } finally {
+      pendingDecrypts.delete(uriString);
+      await updateContextAsync();
+    }
+  })();
+
+  pendingDecrypts.set(uriString, decryptPromise);
+  await decryptPromise;
 };
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
@@ -277,12 +307,20 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
       await updateContextAsync();
     }),
-    vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      if (shouldTrack(editor?.document)) {
-        await tryAutoDecrypt(editor.document);
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      // Clear previous timeout to prevent rapid-fire triggers
+      if (activeEditorChangeTimeout) {
+        clearTimeout(activeEditorChangeTimeout);
       }
 
-      await updateContextAsync();
+      // Add debounce delay to prevent duplicate triggers during rapid editor switching
+      activeEditorChangeTimeout = setTimeout(async () => {
+        if (shouldTrack(editor?.document)) {
+          await tryAutoDecrypt(editor.document);
+        }
+
+        await updateContextAsync();
+      }, 50);
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
       if (Note.isActive(event.document)) {

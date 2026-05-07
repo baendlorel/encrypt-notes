@@ -3,6 +3,7 @@
     "target": "ESNext",
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "types": ["node"],
     "resolveJsonModule": true,
     "resolvePackageJsonImports": true,
     "declaration": false,
@@ -10,7 +11,7 @@
     "esModuleInterop": true,
     "strict": true,
     "outDir": "out",
-    "baseUrl": "."
+    "rootDir": "src"
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "tests/**/*.ts"]
+  "include": ["./src/**/*.ts", "./src/**/*.d.ts", "./tests/**/*.ts"]
 }
