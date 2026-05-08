@@ -110,6 +110,11 @@
           "default": 5,
           "minimum": 0,
           "markdownDescription": "%configuration.passwordKeepMinute.description%"
+        },
+        "secret-notes.debug": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%configuration.debug.description%"
         }
       }
     }

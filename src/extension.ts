@@ -43,6 +43,9 @@ const openVirtualEditor = async (
 
     // Open the decrypted virtual document so later saves go through the custom file system provider.
     const virtualDocument = await vscode.workspace.openTextDocument(state.virtualUri);
+    if (configs.debug) {
+      vscode.window.showInformationMessage(state.sourceUri.fsPath);
+    }
     await vscode.window.showTextDocument(virtualDocument, { preview: false, viewColumn: targetViewColumn });
     await Note.closeRelatedTabs(state.sourceUri);
 
@@ -167,6 +170,9 @@ const decrypt = async (document: vscode.TextDocument): Promise<void> => {
     state.clear();
 
     const sourceDocument = await vscode.workspace.openTextDocument(state.sourceUri);
+    if (configs.debug) {
+      vscode.window.showInformationMessage(state.sourceUri.fsPath);
+    }
     await vscode.window.showTextDocument(sourceDocument, {
       preview: false,
       viewColumn: vscode.window.activeTextEditor?.viewColumn,

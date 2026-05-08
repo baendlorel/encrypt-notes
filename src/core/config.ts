@@ -8,6 +8,7 @@ class SecretNotesConfiguration {
   private fileExtensions: Set<string> = new Set();
   private exclude: string[] = [];
 
+  debug = false;
   passwordKeepTime = Configs.DefaultPasswordKeepMinute * 60 * 1000;
 
   update() {
@@ -23,6 +24,8 @@ class SecretNotesConfiguration {
 
     const rawExclude = this.config.get<string[]>('exclude', Configs.DefaultExclude);
     this.exclude = rawExclude.map((v) => v.trim()).filter(Boolean);
+
+    this.debug = this.config.get<boolean>('debug', false);
 
     const rawPasswordKeepTime =
       this.config.get<number>('passwordKeepMinute', Configs.DefaultPasswordKeepMinute) * 60 * 1000;

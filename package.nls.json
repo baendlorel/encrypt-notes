@@ -5,5 +5,6 @@
   "configuration.title": "Secret Notes",
   "configuration.fileExtensions.description": "File extensions to manage (without leading dots), for example `[\"txt\", \"md\"]`.",
   "configuration.exclude.description": "Directories to ignore, for example `[\"node_modules\", \"dist\"]`. Matched files won't show encrypt/permanent decrypt actions.",
-  "configuration.passwordKeepMinute.description": "Password cache time in minutes. After this time, the cached password in state should be cleared. Set to `0` to disable caching."
+  "configuration.passwordKeepMinute.description": "Password cache time in minutes. After this time, the cached password in state should be cleared. Set to `0` to disable caching.",
+  "configuration.debug.description": "Show debug information."
 }
