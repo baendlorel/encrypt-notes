@@ -1,5 +1,5 @@
 import vscode from 'vscode';
-import { EncrytConfig } from '../core/consts.js';
+import { EncryptConfig } from '../core/consts.js';
 import { configs } from '../core/config.js';
 import { vsc } from '../core/methods.js';
 import { t } from '../i18n/index.js';
@@ -30,13 +30,13 @@ export namespace Note {
     private _password: string | undefined = undefined;
 
     constructor(sourceUri: vscode.Uri) {
-      if (sourceUri.scheme === EncrytConfig.UriScheme) {
+      if (sourceUri.scheme === EncryptConfig.UriScheme) {
         sourceUri = vscode.Uri.parse(decodeURIComponent(sourceUri.query));
       }
 
       this.sourceUri = sourceUri;
       this.virtualUri = sourceUri.with({
-        scheme: EncrytConfig.UriScheme,
+        scheme: EncryptConfig.UriScheme,
         path: createVirtualPath(sourceUri),
         query: encodeURIComponent(sourceUri.toString()),
         fragment: '',
@@ -81,7 +81,7 @@ export namespace Note {
 
   const states = new Map<string, State>();
   export const add = (uri: vscode.Uri): State => {
-    const sourceUri = uri.scheme === EncrytConfig.UriScheme ? vscode.Uri.parse(decodeURIComponent(uri.query)) : uri;
+    const sourceUri = uri.scheme === EncryptConfig.UriScheme ? vscode.Uri.parse(decodeURIComponent(uri.query)) : uri;
     const sourceKey = sourceUri.toString();
     const existing = states.get(uri.toString()) ?? states.get(sourceKey);
     if (existing) {
@@ -153,7 +153,7 @@ export namespace Note {
   };
 
   export const isVirtual = (document: vscode.TextDocument) => isVirtualUri(document.uri);
-  export const isVirtualUri = (uri: vscode.Uri) => uri.scheme === EncrytConfig.UriScheme;
+  export const isVirtualUri = (uri: vscode.Uri) => uri.scheme === EncryptConfig.UriScheme;
   export const isVirtualInput = (input: unknown): input is vscode.TabInputText =>
     input instanceof vscode.TabInputText && isVirtualUri(input.uri);
 

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { Consts, EncrytConfig } from './core/consts.js';
+import { Consts, EncryptConfig } from './core/consts.js';
 import { configs } from './core/config.js';
 import { t } from './i18n/index.js';
 import { NoteError } from './lib/errors.js';
@@ -263,7 +263,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
   configs.update();
 
   context.subscriptions.push(
-    vscode.workspace.registerFileSystemProvider(EncrytConfig.UriScheme, new SecretNotesProvider(), {
+    vscode.workspace.registerFileSystemProvider(EncryptConfig.UriScheme, new SecretNotesProvider(), {
       isCaseSensitive: true,
     }),
     // & This is for menu editor/title to trigger

@@ -13,9 +13,9 @@ class SecretNotesConfiguration {
   update() {
     this.config = vscode.workspace.getConfiguration(Consts.ExtensionId);
 
-    const rawFileExtensions = this.config.get<string[]>('fileExtensions', Configs.DefaultFileExtensions);
+    const rawFileExts = this.config.get<string[]>('fileExtensions', Configs.DefaultFileExts);
     this.fileExtensions = new Set(
-      rawFileExtensions
+      rawFileExts
         .map((v) => v.trim().toLowerCase())
         .map((v) => (v.startsWith('.') ? v : '.' + v))
         .filter(Boolean),

@@ -2,12 +2,12 @@ import crypto from 'node:crypto';
 import vscode from 'vscode';
 import type { EncryptedHeader, ParsedEncryptedFile } from './types.js';
 
-import { EncrytConfig } from '../core/consts.js';
+import { EncryptConfig } from '../core/consts.js';
 import { NoteError } from './errors.js';
 
 export namespace CrypNote {
   const deriveKey = (password: string, salt: Buffer, iterations: number): Buffer =>
-    crypto.pbkdf2Sync(password, salt, iterations, EncrytConfig.KeyLength, EncrytConfig.Pbkdf2Digest);
+    crypto.pbkdf2Sync(password, salt, iterations, EncryptConfig.KeyLength, EncryptConfig.Pbkdf2Digest);
 
   const parseHeader = (rawHeader: string): EncryptedHeader => {
     let parsed: unknown;
@@ -72,16 +72,16 @@ export namespace CrypNote {
   };
 
   export const isEncryptedText = (s: string) =>
-    s.startsWith(EncrytConfig.Flag) || s.startsWith(EncrytConfig.FlagWithBom);
+    s.startsWith(EncryptConfig.Flag) || s.startsWith(EncryptConfig.FlagWithBom);
 
   export const isEncrypted = (document: vscode.TextDocument) => isEncryptedText(document.getText());
 
   export const encrypt = (plainText: string, password: string): string => {
-    const salt = crypto.randomBytes(EncrytConfig.SaltLength);
-    const iv = crypto.randomBytes(EncrytConfig.IvLength);
-    const key = deriveKey(password, salt, EncrytConfig.Pbkdf2Iterations);
+    const salt = crypto.randomBytes(EncryptConfig.SaltLength);
+    const iv = crypto.randomBytes(EncryptConfig.IvLength);
+    const key = deriveKey(password, salt, EncryptConfig.Pbkdf2Iterations);
 
-    const cipher = crypto.createCipheriv(EncrytConfig.Algorithm, key, iv);
+    const cipher = crypto.createCipheriv(EncryptConfig.Algorithm, key, iv);
     // ! Must be down before getAuthTag()
     const ciphertext = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]).toString('base64');
 
@@ -90,13 +90,13 @@ export namespace CrypNote {
       v: 1,
       alg: 'AES-256-GCM',
       kdf: 'PBKDF2-SHA256',
-      iter: EncrytConfig.Pbkdf2Iterations,
+      iter: EncryptConfig.Pbkdf2Iterations,
       salt: salt.toString('base64'),
       iv: iv.toString('base64'),
       tag: tag.toString('base64'),
     };
 
-    return [EncrytConfig.Flag, JSON.stringify(header), ciphertext].join('\n');
+    return [EncryptConfig.Flag, JSON.stringify(header), ciphertext].join('\n');
   };
 
   /**
@@ -109,14 +109,14 @@ export namespace CrypNote {
     const iv = Buffer.from(header.iv, 'base64');
     const tag = Buffer.from(header.tag, 'base64');
 
-    if (salt.length !== EncrytConfig.SaltLength || iv.length !== EncrytConfig.IvLength || tag.length !== 16) {
+    if (salt.length !== EncryptConfig.SaltLength || iv.length !== EncryptConfig.IvLength || tag.length !== 16) {
       throw new NoteError.InvalidEncryptedFileError('Encrypted metadata has invalid lengths.');
     }
 
     const key = deriveKey(password, salt, header.iter);
 
     try {
-      const decipher = crypto.createDecipheriv(EncrytConfig.Algorithm, key, iv);
+      const decipher = crypto.createDecipheriv(EncryptConfig.Algorithm, key, iv);
       decipher.setAuthTag(tag);
       const plainText = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
       return plainText.toString('utf8');

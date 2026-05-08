@@ -1,6 +1,4 @@
-import { ButtonLocationRaw } from '../lib/types.js';
-
-export namespace EncrytConfig {
+export namespace EncryptConfig {
   export const Algorithm = 'aes-256-gcm';
   export const KeyLength = 32;
   export const IvLength = 12;
@@ -27,7 +25,7 @@ export namespace Consts {
 export type ContextKey = 'canEncrypt' | 'canDecrypt';
 
 export namespace Configs {
-  export const DefaultFileExtensions = ['.txt', '.md'];
+  export const DefaultFileExts = ['.txt', '.md'];
   export const DefaultExclude = ['node_modules', 'dist', 'out', 'build', 'coverage', '.git', '.next', '.turbo'];
   export const DefaultPasswordKeepMinute = 5;
 }
